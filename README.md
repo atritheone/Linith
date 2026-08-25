@@ -75,11 +75,11 @@ AI styles:
 
 Linith can be built for several targets:
 
-Standalone HTML
-Windows
-macOS
-Linux
-Android
+* Standalone HTML
+* Windows
+* macOS
+* Linux
+* Android
 
 Build the desired version from the source, then run the resulting HTML file or platform-specific application.
 
