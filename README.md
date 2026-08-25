@@ -4,7 +4,7 @@
 
 Played on a 10×10 board, **Sun** and **Moon** place Swans and Stones, move formations, push opposing Swans and gradually restrict the opponent's available space.
 
-There are no captures. Swans are defeated by being completely encircled and frozen.
+Swans are defeated by being completely encircled and frozen.
 
 This repository contains the browser version of Linith, built with HTML, CSS and JavaScript.
 
