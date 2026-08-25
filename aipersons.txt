@@ -1,0 +1,36 @@
+
+Constrictor (Default, Legacy AI)
+
+Goal - Suffocate. Max pressure on enemy silvers, rewards closing circles, avoids self-freezes.
+
+Signals - Strong enemy silver penalty, elevated circle pressure, tiny tolerance for minor self-loss if it freezes them.
+
+Rupture
+
+Goal - Fracture the opponent into many disconnected Swan groups, then constrict.
+
+Signals - Bonus for increasing enemy group count, moderate circle pressure, mild willingness to trade tempo for future cuts.
+
+Blizzard
+
+Goal - Force freezes quickly, even via opportunistic trades.
+
+Signals - Very high freeze reward, lighter self-freeze penalty than Constrictor, small sacrifice bias to accept short-term strife for a freeze.
+
+Librarian
+
+Goal - Clean positional play. Keep your own silvers high, reduce theirs methodically.
+
+Signals - Big weight on your own silvers, big penalty on theirs; least interested in circle theatrics.
+
+Swarm
+
+Goal - Rapid development to many active swans, then press.
+
+Signals - Early-game nudge toward Swan placement; moderate circle pressure; slightly down-weights early Stones.
+
+Fortress
+
+Goal - Build sturdy, choking structures and win on containment.
+
+Signals - Highest circle-pressure emphasis; conservative about self-freezes; slower, heavier positions.

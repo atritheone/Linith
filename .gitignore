@@ -1,0 +1,102 @@
+# Operating-system and editor state
+.DS_Store
+._*
+desktop.ini
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Local notes and user-created game state
+/Linith.txt
+/epsilon/epsilon.txt
+/saves/
+/epsilon/saves/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.rdp
+/mac/MacinCloud_SY433/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*~
+
+# Python environments, caches, and native build products
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+/epsilon/**/build/
+/epsilon/**/dist/
+
+# Epsilon training outputs. Source code remains tracked.
+/epsilon/game data/*
+!/epsilon/game data/README.md
+/epsilon/models/*
+!/epsilon/models/README.md
+/epsilon/**/*.npz
+/epsilon/**/*.pt
+/epsilon/logs/
+
+# A clean checkout of the separate epsilon repository used for remote jobs.
+# The authored Linith Epsilon source at /epsilon remains tracked.
+/epsilon/package/
+
+# Node/Electron dependencies and packages
+node_modules/
+/mac/dist/
+*.dmg
+*.rar
+
+# Historical single-file exports; Git history is the version archive going forward.
+/web/legacy builds/
+/android/index.html
+/android/index_*.html
+
+# Android Studio, Gradle, and Capacitor-generated output
+/android/lindroid/.idea/
+/android/lindroid/android/.gradle/
+/android/lindroid/android/**/build/
+/android/lindroid/android/local.properties
+/android/lindroid/android/capacitor-cordova-android-plugins/
+/android/lindroid/android/app/src/main/assets/public/
+/android/lindroid/android/app/src/main/assets/capacitor.config.json
+/android/lindroid/android/app/src/main/assets/capacitor.plugins.json
+/android/lindroid/android/app/src/main/res/xml/config.xml
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+*.iml
+
+# .NET build products and bundled WebView runtime
+/windows/**/bin/
+/windows/**/obj/
+/windows/.vs/
+/windows/Linith/WebView2Fixed/

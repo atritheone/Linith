@@ -1,0 +1,28 @@
+* text=auto
+
+*.cs text eol=lf
+*.css text eol=lf
+*.gradle text eol=lf
+*.html text eol=lf
+*.java text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.properties text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.svg text eol=lf
+*.txt text eol=lf
+*.xml text eol=lf
+
+*.bat text eol=crlf
+
+*.docx binary
+*.icns binary
+*.ico binary
+*.indd binary
+*.jar binary
+*.jpg binary
+*.pdf binary
+*.png binary
+*.wav binary

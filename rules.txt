@@ -1,0 +1,113 @@
+
+Linith
+
+
+1. Overview
+
+Linith is a contest of motion and stillness between the Sun ☼ and the Moon ☾.
+Across a 10×10 grid, each commands formations of Swans and Stones, shaping and confining space through balance and foresight.
+Victory is achieved by bringing all opposing Swans to stillness through perfect encirclement.
+
+
+2. Components
+
+Board - A 10×10 grid of neutral grey tiles.
+
+Players -
+
+The Sun ☼
+
+The Moon ☾
+
+Pieces -
+
+Swan - A white tile marked with ☼ or ☾; represents grace, motion, and growth.
+
+Stone - A black tile; represents strength, boundary, and confinement.
+
+
+3. Objective
+
+To encircle and freeze all of your opponent’s Swans.
+A player wins when every opposing Swan is encircled.
+
+
+4. Setup
+
+The board begins entirely grey.
+
+The Sun ☼ places the first Swan on any grey tile.
+
+The Moon ☾ places a Swan on any grey tile not adjacent (orthogonal or diagonal) to the Sun’s Swan.
+
+The Moon ☾ then takes the first turn.
+
+Turns alternate thereafter.
+
+
+5. Turn Structure
+
+On your turn, perform one of the following actions -
+
+A. Place a Swan
+
+Place a new Swan on a grey tile adjacent (orthogonal) to one of your existing Swans.
+
+A Swan cannot be placed adjacent to an opponent’s Swan.
+
+Each player can have a maximum of six Swans on the board.
+
+Once both players have six Swans on the board, each turn has two actions.
+
+B. Place a Stone
+
+Place a Stone on any grey tile.
+
+C. Move Swan(s)
+
+Move one or more of your existing Swans one tile in any direction (orthogonal or diagonal).
+
+A Swan cannot move into any of the eight tiles (orthogonal or diagonal) surrounding an opponent’s Swan that has no Stones in any of its own eight surrounding tiles.
+
+D. Push Swan(s)
+
+Push an enemy Swan away from your own Swan. The enemy Swan must be active and in an adjacent tile (orthogonal or diagonal).
+
+
+When a Swan moves (or is pushed), all Stones unique to that Swan move with it, maintaining their relative positions.
+
+Shared Stones do not move -
+
+If a Stone is adjacent to both your moving Swan(s) and an unmoved friendly Swan, it remains with the unmoved Swan.
+
+If a Stone is adjacent to an opponent’s Swan, it also remains in place.
+
+Swans and Stones can only move into grey (empty) tiles.
+
+Frozen Swans cannot move, spawn, or move Stones.
+
+
+6. Encirclement and Stillness
+
+A Swan or connected group of Swans is encircled when all eight surrounding tiles (orthogonal and diagonal)(known as silvers) are occupied by Stones, Enemy Swans, andor the board’s edge.
+
+When encircled -
+
+The affected Swan(s) become frozen — turned to stillness.
+
+Frozen Swans remain on the board as white tiles but are inactive -
+
+They cannot move, spawn, or move Stones.
+
+They continue to occupy space, affecting placement and encirclement around them.
+
+Encircling an opponent's Swan grants one extra action per Swan frozen.
+
+If a player’s final active Swan becomes encircled, that player loses the game.
+
+
+7. Victory and End Conditions
+
+Victory - You win when your opponent’s final active Swan is encircled.
+
+Draw - If both players’ final active Swans are encircled during the same turn, the game ends in a draw.

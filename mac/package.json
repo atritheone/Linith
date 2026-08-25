@@ -1,0 +1,62 @@
+{
+  "name": "linith",
+  "version": "0.232.0",
+  "productName": "Linith",
+  "description": "Linith for Mac",
+  "author": "slayer",
+  "license": "MIT",
+  "main": "main.js",
+
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac",
+    "dist:mac": "electron-builder --mac dmg zip"
+  },
+
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "26.0.12"
+  },
+
+  "build": {
+    "appId": "com.linith.desktop",
+    "productName": "Linith",
+
+    "files": [
+      "main.js",
+      "package.json",
+      "static/**"
+    ],
+
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.games",
+      "artifactName": "Linith-${version}-mac.${ext}",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64"]
+        }
+      ]
+    },
+
+    "dmg": {
+      "title": "Linith ${version}",
+      "icon": "build/icon.icns",
+      "iconSize": 128,
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    }
+  }
+}

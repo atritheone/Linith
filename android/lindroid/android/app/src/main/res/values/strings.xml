@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Linith</string>
+    <string name="title_activity_main">Linith</string>
+    <string name="package_name">com.linith.app</string>
+    <string name="custom_url_scheme">com.linith.app</string>
+</resources>

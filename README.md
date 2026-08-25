@@ -1,94 +1,143 @@
-# Linith
+<p align="center">
+  <img src="flash/linith_logo_5.png" alt="Linith logo" width="520" />
+</p>
 
-**Linith** is a two-player abstract strategy game of movement, pressure and encirclement.
+<h1 align="center">Linith</h1>
 
-Played on a 10×10 board, **Sun** and **Moon** place Swans and Stones, move formations, push opposing Swans and gradually restrict the opponent's available space.
+<p align="center">
+  A two-player abstract strategy game of movement, pressure, and encirclement.
+</p>
 
-Swans are defeated by being completely encircled and frozen.
+<p align="center">
+  <a href="https://atritheone.com/linith">Website</a>
+  ·
+  <a href="#quick-start">Quick start</a>
+  ·
+  <a href="#native-wrappers">Builds</a>
+  ·
+  <a href="#epsilon">Epsilon</a>
+  ·
+  <a href="LICENSE">MIT license</a>
+</p>
 
-This repository contains the browser version of Linith, built with HTML, CSS and JavaScript.
+## About the game
 
-## How to Play
+On a 10×10 board, Sun and Moon place Swans and Stones, move formations, push
+opposing Swans, and gradually restrict the opponent's space.
 
-Sun places the first Swan. Moon places the second on a non-adjacent square, then takes the first turn.
+A Swan becomes frozen when its group is completely encircled, and a player
+loses when their final active Swan is frozen.
 
-On a turn, players can:
+This repository contains Linith 0.232, its browser and native wrappers, and
+**Epsilon**: the Linith-specific AlphaZero-style self-play and neural-network
+training system.
 
-* Place a Swan.
-* Place a Stone.
-* Move one or more Swans one square.
-* Push adjacent enemy Swans.
+## Quick start
 
-Players may have up to **six Swans**. Once both sides have six, turns begin with **two actions**.
+Open [`web/current build/linith_0.232_web.html`](web/current%20build/linith_0.232_web.html)
+in a modern browser. The game is a self-contained HTML file and does not need a
+web server.
 
-Stones adjacent to moving Swans may move with them, allowing the board itself to be reshaped.
+The standalone variant used by native wrappers is
+[`web/current build/linith_0.232.html`](web/current%20build/linith_0.232.html).
 
-## Encirclement
+## Game modes
 
-A Swan group freezes when it has no adjacent empty squares.
+- Local two-player
+- AI plays Sun or Moon
+- Easy, Medium, and Hard difficulty
+- Doctrinal, Constrictor, Rupture, Blizzard, Librarian, Swarm, and Fortress AI styles
 
-Frozen Swans remain on the board but cannot move or spawn.
+The complete rules are in [`rules.txt`](rules.txt), with AI style notes in
+[`aipersons.txt`](aipersons.txt).
 
-Freezing an enemy Swan grants an additional action.
+## Repository layout
 
-A player loses when their final active Swan is encircled. If both players' final active Swans are encircled during the same action, the game is a draw.
+| Path | Contents |
+| --- | --- |
+| `web/` | Current standalone browser builds |
+| `windows/` | .NET 8 WinForms/WebView2 wrapper |
+| `mac/` | Electron wrapper and packaged web source |
+| `android/` | Capacitor Android project |
+| `epsilon/` | AlphaZero-style rules, self-play, MCTS, training, and C++ acceleration |
+| `flash/` | Logos, icons, and sound assets |
+| `pressure/` | *Pressure*, the Linith strategy book and source chapters |
 
-## Game Modes
+Historical exported HTML files, compiled applications, dependencies, IDE state,
+and local saves are intentionally not versioned. Git history is the version
+archive from this point forward.
 
-* Local
-* AI Plays Sun
-* AI Plays Moon
+## Native wrappers
 
-AI difficulty:
+### Windows
 
-* Easy
-* Medium
-* Hard
+Install the .NET 8 SDK and the Microsoft Edge WebView2 Runtime, then run:
 
-AI styles:
+```powershell
+dotnet run --project windows/Linith/Linith.csproj
+```
 
-* Doctrinal
-* Constrictor
-* Rupture
-* Blizzard
-* Librarian
-* Swarm
-* Fortress
+The project uses a bundled fixed WebView2 runtime when one is present locally
+and otherwise falls back to the installed system runtime. The large fixed
+runtime is not stored in Git.
 
-## Features
+### macOS
 
-* 10×10 board
-* Multi-Swan movement
-* Enemy-Swan pushing
-* Dynamic Stone movement
-* Encirclement and freezing
-* Hint system
-* Undo and move-history navigation
-* Surrender
-* Stopwatch and chess clocks
-* Save/load
-* Game review and replay
-* Sound effects
-* Configurable board appearance
+Install Node.js, then run:
 
-## Running
+```sh
+cd mac
+npm ci
+npm start
+```
 
-Linith can be built for several targets:
+Create a distributable package with `npm run dist:mac` on macOS.
 
-* Standalone HTML
-* Windows
-* macOS
-* Linux
-* Android
+### Android
 
-Build the desired version from the source, then run the resulting HTML file or platform-specific application.
+Install Node.js, a supported JDK, and the Android SDK, then run:
 
-## Technology
+```sh
+cd android/lindroid
+npm ci
+npx cap sync android
+cd android
+./gradlew assembleDebug
+```
 
-Linith is built with:
+On Windows, use `gradlew.bat assembleDebug` for the final command.
 
-* HTML
-* CSS
-* JavaScript
-* Web Audio
-* Browser local storage
+## Epsilon
+
+Epsilon implements Linith's game state and action space, policy/value networks,
+Monte Carlo tree search, self-play, evaluation, model promotion, and optional
+Pybind11/C++ acceleration.
+
+Create an environment and install the Python dependencies:
+
+```sh
+cd epsilon
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+On Windows, activate with `.venv\Scripts\activate`. Install the appropriate
+CUDA-enabled PyTorch build when training on a GPU. Build the accelerated module
+from `epsilon/cport` with:
+
+```sh
+python setup.py build_ext --inplace
+```
+
+See [`epsilon/setup.txt`](epsilon/setup.txt) for the GPU-host workflow.
+
+Model checkpoints (`.pt`), replay/training arrays (`.npz`), logs, compiled
+extensions, and virtual environments are generated artifacts. They remain local
+and should be published through release or model storage with checksums when
+they need to be shared.
+
+## License
+
+Linith is released under the [MIT License](LICENSE).
