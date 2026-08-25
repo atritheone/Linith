@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="flash/linith_logo_5.png" alt="Linith logo" width="520" />
+  <img src="flash/linith_logo_5.png" alt="Linith logo" width="300" />
 </p>
 
 <h1 align="center">Linith</h1>
