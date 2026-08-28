@@ -11,20 +11,84 @@
 <p align="center">
   <a href="https://atritheone.com/linith">Website</a>
   ·
+  <a href="#how-to-play">How to play</a>
+  ·
   <a href="#development">Development</a>
   ·
   <a href="#builds">Builds</a>
   ·
   <a href="#epsilon">Epsilon</a>
   ·
-  <a href="LICENSE">MIT license</a>
+  <a href="LICENSE.md">MIT license</a>
 </p>
 
 ## About the game
 
-Played on a 10×10 board, Sun and Moon place Swans and Stones, move formations, push opposing Swans, and gradually restrict the opponent's available space. A Swan group freezes when it has no adjacent empty squares; a player loses when their final active Swan is encircled.
+Played on a 10×10 board, **Sun** and **Moon** place Swans and Stones, move
+formations, push opposing Swans, and gradually restrict the opponent's
+available space.
 
-The complete rules are in [`rules.txt`](rules.txt), and AI style notes are in [`aipersons.txt`](aipersons.txt).
+Swans are defeated by being completely encircled and frozen.
+
+This repository contains Linith 0.232, its browser and native builds, and
+**Epsilon**: the Linith-specific AlphaZero-style self-play and neural-network
+training system.
+
+## How to play
+
+Sun places the first Swan. Moon places the second on a non-adjacent square,
+then takes the first turn.
+
+On a turn, players can:
+
+- Place a Swan.
+- Place a Stone.
+- Move one or more Swans one square.
+- Push adjacent enemy Swans.
+
+Players may have up to **six Swans**. Once both sides have six, turns begin
+with **two actions**.
+
+Stones adjacent to moving Swans may move with them, allowing the board itself
+to be reshaped.
+
+### Encirclement
+
+A Swan group freezes when it has no adjacent empty squares. Frozen Swans remain
+on the board but cannot move or spawn.
+
+Freezing an enemy Swan grants an additional action. A player loses when their
+final active Swan is encircled. If both players' final active Swans are
+encircled during the same action, the game is a draw.
+
+The complete rules are in [`rules.txt`](rules.txt).
+
+## Game modes
+
+- Local two-player
+- AI plays Sun or Moon
+- Easy, Medium, and Hard difficulty
+- Doctrinal, Constrictor, Rupture, Blizzard, Librarian, Swarm, and Fortress AI styles
+
+AI style notes are available in [`aipersons.txt`](aipersons.txt).
+
+## Features
+
+- 10×10 board
+- Multi-Swan movement
+- Enemy-Swan pushing
+- Dynamic Stone movement
+- Encirclement and freezing
+- Hint system
+- Undo and move-history navigation
+- Surrender
+- Stopwatch and chess clocks
+- Save/load
+- Game review and replay
+- Sound effects
+- Configurable board appearance
+- Standalone browser, Windows, macOS, Linux, and Android targets
+- AlphaZero-style training and evaluation through Epsilon
 
 ## Architecture
 
@@ -97,18 +161,6 @@ npm run open
 ```
 
 The `www/` directory and Capacitor's copied Android web assets are generated. Game source must remain in the root `src/` tree. See [`platforms/android-wrapper/README.md`](platforms/android-wrapper/README.md) for Android-specific commands.
-
-## Features
-
-- Local two-player and AI games
-- Easy, Medium, and Hard difficulty
-- Seven AI playing styles
-- Multi-Swan movement and enemy-Swan pushing
-- Dynamic Stone movement, encirclement, and freezing
-- Hint, undo, move-history, replay, save/load, and surrender
-- Stopwatch and chess clocks
-- Sound and configurable board appearance
-- Standalone browser, Windows, macOS, Linux, and Android targets
 
 ## Epsilon
 
