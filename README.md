@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="flash/linith_logo_5.png" alt="Linith logo" width="300" />
+  <img src="build/icon.png" alt="Linith logo" width="300" />
 </p>
 
 <h1 align="center">Linith</h1>
@@ -11,11 +11,9 @@
 <p align="center">
   <a href="https://atritheone.com/linith">Website</a>
   ·
-  <a href="#how-to-play">How to play</a>
+  <a href="#development">Development</a>
   ·
-  <a href="#quick-start">Quick start</a>
-  ·
-  <a href="#native-wrappers">Builds</a>
+  <a href="#builds">Builds</a>
   ·
   <a href="#epsilon">Epsilon</a>
   ·
@@ -24,128 +22,99 @@
 
 ## About the game
 
-Played on a 10×10 board, **Sun** and **Moon** place Swans and Stones, move
-formations, push opposing Swans, and gradually restrict the opponent's
-available space.
+Played on a 10×10 board, Sun and Moon place Swans and Stones, move formations, push opposing Swans, and gradually restrict the opponent's available space. A Swan group freezes when it has no adjacent empty squares; a player loses when their final active Swan is encircled.
 
-Swans are defeated by being completely encircled and frozen.
+The complete rules are in [`rules.txt`](rules.txt), and AI style notes are in [`aipersons.txt`](aipersons.txt).
 
-This repository contains Linith 0.232, its browser and native wrappers, and
-**Epsilon**: the Linith-specific AlphaZero-style self-play and neural-network
-training system.
+## Architecture
 
-## How to play
+Linith has one authored TypeScript renderer shared by every target:
 
-Sun places the first Swan. Moon places the second on a non-adjacent square,
-then takes the first turn.
+```text
+src/renderer                     authored game and interface
+        │
+        ├── Vite ─────────────── dist/renderer
+        │                            ├── Electron (Windows/macOS/Linux)
+        │                            └── Capacitor copy + Android shell
+        │
+        └── standalone builder ─ dist/linith-standalone.html
+```
 
-On a turn, players can:
+Generated HTML is never edited per operating system. Desktop packages load the Vite renderer directly. The Android wrapper copies that renderer and adds its portrait CSS/JavaScript from `platforms/android-wrapper/android-assets`. The standalone builder inlines the compiled CSS, JavaScript, favicon, and sounds into one portable HTML file.
 
-- Place a Swan.
-- Place a Stone.
-- Move one or more Swans one square.
-- Push adjacent enemy Swans.
+The renderer is divided into game orchestration, AI selection, encirclement rules, sound, layout, and settings modules. New infrastructure and pure rules are strictly typed, encirclement behavior has automated tests, and TypeScript validation runs before every production build. The large inherited game and AI engines remain explicit incremental-migration boundaries instead of leaking into the build and platform tooling.
 
-Players may have up to **six Swans**. Once both sides have six, turns begin
-with **two actions**.
+## Development
 
-Stones adjacent to moving Swans may move with them, allowing the board itself
-to be reshaped.
-
-### Encirclement
-
-A Swan group freezes when it has no adjacent empty squares. Frozen Swans remain
-on the board but cannot move or spawn.
-
-Freezing an enemy Swan grants an additional action. A player loses when their
-final active Swan is encircled. If both players' final active Swans are
-encircled during the same action, the game is a draw.
-
-The complete rules are in [`rules.txt`](rules.txt).
-
-## Game modes
-
-- Local two-player
-- AI plays Sun or Moon
-- Easy, Medium, and Hard difficulty
-- Doctrinal, Constrictor, Rupture, Blizzard, Librarian, Swarm, and Fortress AI styles
-
-AI style notes are available in [`aipersons.txt`](aipersons.txt).
-
-## Features
-
-- 10×10 board
-- Multi-Swan movement
-- Enemy-Swan pushing
-- Dynamic Stone movement
-- Encirclement and freezing
-- Hint system
-- Undo and move-history navigation
-- Surrender
-- Stopwatch and chess clocks
-- Save/load
-- Game review and replay
-- Sound effects
-- Configurable board appearance
-- Browser, Windows, macOS, and Android targets
-- AlphaZero-style training and evaluation through Epsilon
-
-## Quick start
-
-Open [`web/current build/linith_0.232_web.html`](web/current%20build/linith_0.232_web.html)
-in a modern browser. The game is a self-contained HTML file and does not need a
-web server.
-
-The standalone variant used by native wrappers is
-[`web/current build/linith_0.232.html`](web/current%20build/linith_0.232.html).
-
-## Native wrappers
-
-### Windows
-
-Install the .NET 8 SDK and the Microsoft Edge WebView2 Runtime, then run:
+Install Node.js, then from the repository root run:
 
 ```powershell
-dotnet run --project windows/Linith/Linith.csproj
-```
-
-The project uses a bundled fixed WebView2 runtime when one is present locally
-and otherwise falls back to the installed system runtime. The large fixed
-runtime is not stored in Git.
-
-### macOS
-
-Install Node.js, then run:
-
-```sh
-cd mac
 npm ci
-npm start
+npm test
+npm run dev
 ```
 
-Create a distributable package with `npm run dist:mac` on macOS.
+`npm run dev` opens the Electron development build with Vite hot reload.
+
+Create a checked production renderer with:
+
+```powershell
+npm run build
+```
+
+## Builds
+
+### Standalone browser file
+
+```powershell
+npm run build:standalone
+```
+
+The self-contained result is `dist/linith-standalone.html`. It can be opened directly without a web server.
+
+### Desktop
+
+Electron owns all three desktop targets:
+
+```powershell
+npm run dist:win
+npm run dist:linux
+npm run dist:mac
+```
+
+Run each packaging command on its native operating system. Packages are written to `release/`.
 
 ### Android
 
-Install Node.js, a supported JDK, and the Android SDK, then run:
+With JDK 21 and Android SDK 36 installed, build the shared renderer first, then sync it into Capacitor:
 
-```sh
-cd android/lindroid
+```powershell
+npm run build
+cd platforms/android-wrapper
 npm ci
-npx cap sync android
-cd android
-./gradlew assembleDebug
+npm run sync
+npm run open
 ```
 
-On Windows, use `gradlew.bat assembleDebug` for the final command.
+The `www/` directory and Capacitor's copied Android web assets are generated. Game source must remain in the root `src/` tree. See [`platforms/android-wrapper/README.md`](platforms/android-wrapper/README.md) for Android-specific commands.
+
+## Features
+
+- Local two-player and AI games
+- Easy, Medium, and Hard difficulty
+- Seven AI playing styles
+- Multi-Swan movement and enemy-Swan pushing
+- Dynamic Stone movement, encirclement, and freezing
+- Hint, undo, move-history, replay, save/load, and surrender
+- Stopwatch and chess clocks
+- Sound and configurable board appearance
+- Standalone browser, Windows, macOS, Linux, and Android targets
 
 ## Epsilon
 
-Epsilon implements Linith's game state and action space, policy/value networks,
-Monte Carlo tree search, self-play, evaluation, model promotion, and optional
-Pybind11/C++ acceleration.
+`epsilon/` contains Linith's AlphaZero-style policy/value networks, Monte Carlo tree search, self-play, evaluation, model promotion, and optional Pybind11/C++ acceleration.
 
-Create an environment and install the Python dependencies:
+Create an environment and install its dependencies:
 
 ```sh
 cd epsilon
@@ -155,46 +124,33 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-On Windows, activate with `.venv\Scripts\activate`. Install the appropriate
-CUDA-enabled PyTorch build when training on a GPU. Build the accelerated module
-from `epsilon/cport` with:
+On Windows, activate with `.venv\Scripts\activate`. Install the appropriate CUDA-enabled PyTorch build when training on a GPU. Build the accelerated module from `epsilon/cport` with:
 
 ```sh
 python setup.py build_ext --inplace
 ```
 
-Model checkpoints (`.pt`), replay/training arrays (`.npz`), logs, compiled
-extensions, and virtual environments are generated artifacts. They remain local
-and should be published through release or model storage with checksums when
-they need to be shared.
+Model checkpoints, replay data, logs, compiled extensions, and environments are generated artifacts and are not committed.
 
 ## Project structure
 
 | Path | Contents |
 | --- | --- |
-| `web/` | Current standalone browser builds |
-| `windows/` | .NET 8 WinForms/WebView2 wrapper |
-| `mac/` | Electron wrapper and packaged web source |
-| `android/` | Capacitor Android project |
-| `epsilon/` | Rules, self-play, MCTS, neural-network training, and C++ acceleration |
-| `flash/` | Logos, icons, and sound assets |
+| `src/main/` | Electron main process |
+| `src/preload/` | Secure desktop preload bridge |
+| `src/renderer/` | Shared TypeScript game, UI, styles, and HTML shell |
+| `scripts/` | Standalone build tooling |
+| `build/` | Authored icons and sound assets |
+| `platforms/android-wrapper/` | Capacitor project and Android-only shell assets |
+| `tests/` | TypeScript rule tests |
+| `epsilon/` | Self-play, MCTS, neural-network training, and C++ acceleration |
 | `pressure/` | *Pressure*, the Linith strategy book and source chapters |
-
-Historical exported HTML files, compiled applications, dependencies, IDE state,
-and local saves are intentionally not versioned. Git history is the version
-archive from this point forward.
+| `flash/` | Additional artwork and historical media sources |
 
 ## Technology
 
-Linith is built with:
-
-- HTML, CSS, and JavaScript
-- Web Audio and browser local storage
-- .NET 8, WinForms, and WebView2
-- Electron and Node.js
-- Capacitor and Android
-- Python, PyTorch, NumPy, Pybind11, and C++
+Linith uses TypeScript, Vite, Electron, Capacitor, the Web Audio API, browser local storage, Node's test runner, Python, PyTorch, NumPy, Pybind11, and C++.
 
 ## License
 
-Linith is released under the [MIT License](LICENSE).
+Linith is released under the [MIT License](LICENSE.md).

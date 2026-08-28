@@ -1,0 +1,66 @@
+html,
+body.linith-android {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.linith-android {
+  --pad: 12px;
+  --gap: 18px;
+  --board: calc(100vw - 42px);
+  --panel-w: calc(100vw - 24px);
+  touch-action: manipulation;
+}
+
+body.linith-android .stage {
+  position: static;
+  display: block;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+body.linith-android .frame {
+  width: 100%;
+  height: auto;
+  min-height: 100dvh;
+}
+
+body.linith-android .wrap {
+  display: flex !important;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  gap: var(--gap) !important;
+  padding: var(--pad) !important;
+}
+
+body.linith-android .boardWrap {
+  flex: none;
+  width: calc(var(--gut-x) + var(--board)) !important;
+  height: calc(var(--gut-y) + var(--board)) !important;
+  align-self: center;
+}
+
+body.linith-android .panel {
+  width: 100%;
+  padding: 8px 4px calc(16px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+body.linith-android .hint {
+  max-height: none !important;
+}
+
+body.linith-android .footer {
+  position: static;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+}
+
+body.linith-android button,
+body.linith-android select,
+body.linith-android input {
+  min-height: 40px;
+}

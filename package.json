@@ -1,0 +1,99 @@
+{
+  "name": "linith",
+  "version": "0.232.0",
+  "description": "Abstract strategy game built with Electron, Vite, and TypeScript",
+  "homepage": "https://atritheone.com/linith",
+  "author": {
+    "name": "slayer",
+    "email": "edward@atritheone.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "tsc --noEmit && electron-vite build",
+    "build:standalone": "npm run build && node scripts/build-standalone.mjs",
+    "dist:win": "npm run build && electron-builder --win portable",
+    "dist:linux": "npm run build && electron-builder --linux deb",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "preview": "electron-vite preview"
+  },
+  "build": {
+    "appId": "com.linith.desktop",
+    "productName": "Linith",
+    "asar": true,
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "signExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "maintainer": "slayer <edward@atritheone.com>",
+      "category": "Game",
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.games",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "portable": {
+      "artifactName": "Linith-${version}-portable.${ext}"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6"
+  },
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
+  }
+}

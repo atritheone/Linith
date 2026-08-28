@@ -27,7 +27,6 @@ Thumbs.db
 *.jks
 *.keystore
 *.rdp
-/mac/MacinCloud_SY433/
 
 # Logs and temporary files
 *.log
@@ -66,27 +65,32 @@ htmlcov/
 # The authored Linith Epsilon source at /epsilon remains tracked.
 /epsilon/package/
 
-# Node/Electron dependencies and packages
+# Node/Electron dependencies and generated packages
 node_modules/
-/mac/dist/
+/dist/
+/release/
 *.dmg
 *.rar
 
-# Historical single-file exports; Git history is the version archive going forward.
-/web/legacy builds/
-/android/index.html
-/android/index_*.html
+# Retired platform/source trees may still contain local historical builds.
+# The shared root build and platforms/android-wrapper replace these paths.
+/android/
+/mac/
+/web/
+/windows/
 
 # Android Studio, Gradle, and Capacitor-generated output
-/android/lindroid/.idea/
-/android/lindroid/android/.gradle/
-/android/lindroid/android/**/build/
-/android/lindroid/android/local.properties
-/android/lindroid/android/capacitor-cordova-android-plugins/
-/android/lindroid/android/app/src/main/assets/public/
-/android/lindroid/android/app/src/main/assets/capacitor.config.json
-/android/lindroid/android/app/src/main/assets/capacitor.plugins.json
-/android/lindroid/android/app/src/main/res/xml/config.xml
+/platforms/android-wrapper/.idea/
+/platforms/android-wrapper/.android-build*/
+/platforms/android-wrapper/www/
+/platforms/android-wrapper/android/.gradle/
+/platforms/android-wrapper/android/**/build/
+/platforms/android-wrapper/android/local.properties
+/platforms/android-wrapper/android/capacitor-cordova-android-plugins/
+/platforms/android-wrapper/android/app/src/main/assets/public/
+/platforms/android-wrapper/android/app/src/main/assets/capacitor.config.json
+/platforms/android-wrapper/android/app/src/main/assets/capacitor.plugins.json
+/platforms/android-wrapper/android/app/src/main/res/xml/config.xml
 *.apk
 *.aab
 *.aar
@@ -94,9 +98,3 @@ node_modules/
 *.dex
 *.class
 *.iml
-
-# .NET build products and bundled WebView runtime
-/windows/**/bin/
-/windows/**/obj/
-/windows/.vs/
-/windows/Linith/WebView2Fixed/

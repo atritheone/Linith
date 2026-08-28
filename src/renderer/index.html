@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f0f12" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; base-uri 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' data: ws:" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Linith</title>
+  </head>
+  <body>
+    <!-- =========================================================
+           app markup
+         ========================================================= -->
+      <div class="stage">
+        <div class="frame">
+          <div class="wrap">
+
+        <!-- board + axes -->
+        <div class="boardWrap">
+          <div id="board" class="board"></div>         <!-- 10x10 grid host -->
+          <div id="yLabels" class="yLabels" aria-hidden="true"></div> <!-- 1..10 -->
+          <div id="xLabels" class="xLabels" aria-hidden="true"></div> <!-- A..J -->
+        </div>
+
+        <div class="panel">
+
+        <!-- side panel controls, start menu, log, settings -->
+          <div class="panelHead">
+            <div class="title">Linith</div>
+              <div id="timer" class="timer hidden" aria-live="polite">00:00.00</div>
+              <div id="chessClocks" class="clocks hidden" aria-live="polite">
+              <span id="clockSun"  class="clock sun">10:00</span>
+              <span id="clockMoon" class="clock moon">10:00</span>
+            </div>
+          </div>
+
+          <!-- turn pill -->
+          <div id="turnInfo" class="row">
+            <span id="turnPill"></span>
+          </div>
+
+          <div class="row">
+            <button id="actUndo">Undo</button>   <!-- undo state -->
+            <button id="actReset">Reset</button> <!-- reset to menu -->
+            <button id="actHint">Hint</button>   <!-- show hint -->
+            <button id="actSurrender">Surrender</button> <!-- surrender game -->
+            <button id="actBack"    title="Back">⟵</button>
+            <button id="actForward" title="Forward">⟶</button>
+            <div id="surrenderConfirm" class="confirm" style="display:none;">
+              <div>Are you sure you want to surrender?</div>
+              <div class="confirm-buttons">
+                <button id="surrenderYes">Yes</button>
+                <button id="surrenderNo">No</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+          <div class="sep"></div>
+
+          <!-- startup menu (hidden once game begins) -->
+          <div id="startMenu" class="startMenu" aria-live="polite">
+            <button id="btnLocal">Local</button>     <!-- human vs human -->
+            <button id="btnAiSun">AI plays Sun</button>
+            <button id="btnAiMoon">AI plays Moon</button>
+          </div>
+
+          <div class="log" id="log" aria-live="polite"></div>
+
+          <!-- replay controls (visible only when viewing an imported replay) -->
+          <div id="replayControls" class="replayControls" aria-label="Replay controls">
+            <button id="replayPlayPause" title="Play/Pause" aria-label="Play">▶</button>
+            <div class="rangeWrap">
+              <input id="replaySpeed" type="range" min="0.25" max="4" step="0.25" value="1" aria-label="Replay speed">
+              <div id="replaySpeedVal" class="val">1.0×</div>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <!-- rules hint -->
+          <div class="hint">
+            <br><b>Start</b> Sun places first Swan, Moon places second (not adjacent), then Moon has the first turn.
+            <br><br><b>Activity</b> Select an empty tile; either place a Swan (white) (maximum six on the board per player; once both players have six Swans on the board, each turn has two actions.) or place a Stone (black) • Select one or more Swans to move them one tile (green is a legal move; red is not; cyan/purple to deselect) or push them, if they are enemy Swans and are adjacent. Adjacent Stones follow; shared Stones stay; Stones adjacent to any enemy Swan stay.
+            <br><br><b>Victory</b> Choking an enemy Swan's surrounding empty tiles (silvers) encircles it. Encircled Swans freeze, becoming immovable and unable to spawn. Freezing an opponent's Swan grants one extra action per Swan frozen. When the last active Swan is encircled, the player loses the game. If both players’ final active Swans are encircled during the same turn, the game ends in a draw.
+          </div>
+
+          <!-- footer / version / settings -->
+          <div class="footer">
+            <span id="version">0.232.0</span>
+            <button id="gear-btn" title="Settings" aria-label="Settings">Settings</button>
+
+            <!-- settings popover (grid and empty color sliders) -->
+            <div id="gear-panel"
+                 role="dialog"
+                 aria-label="Settings"
+                 style="display:none;position:absolute;right:0;bottom:26px;min-width:220px;padding:10px;border:1px solid #2d3037;border-radius:10px;background:#17171c;box-shadow:0 10px 24px rgba(0,0,0,.35);z-index:50">
+
+              <!-- ai difficulty -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="aiDifficulty" style="min-width:70px;font-size:.85rem;opacity:.8">
+                  AI Difficulty
+                </label>
+                <select id="aiDifficulty" style="flex:1;background:#23252b;color:#f2f2f2;border:1px solid #2d3037;border-radius:8px;padding:6px 8px">
+                  <option value="easy">Easy</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+
+              <!-- ai style -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="aiStyle" style="min-width:70px;font-size:.85rem;opacity:.8">
+                  AI Style
+                </label>
+                <select id="aiStyle" style="flex:1;background:#23252b;color:#f2f2f2;border:1px solid #2d3037;border-radius:8px;padding:6px 8px">
+                  <option value="doctrinal" selected>Doctrinal</option>
+                  <option value="constrictor">Constrictor</option>
+                  <option value="rupture">Rupture</option>
+                  <option value="blizzard">Blizzard</option>
+                  <option value="librarian">Librarian</option>
+                  <option value="swarm">Swarm</option>
+                  <option value="fortress">Fortress</option>
+                </select>
+              </div>
+
+              <!-- game clock -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="clockMode" style="min-width:70px;font-size:.85rem;opacity:.8">Clock</label>
+                <select id="clockMode" style="flex:1;background:#23252b;color:#f2f2f2;border:1px solid #2d3037;border-radius:8px;padding:6px 8px">
+                  <option value="off" selected>Off</option>
+                  <option value="stopwatch">Stopwatch</option>
+                  <option value="chess-3">3 Minutes</option>
+                  <option value="chess-5">5 Minutes</option>
+                  <option value="chess-10">10 Minutes</option>
+                </select>
+              </div>
+
+              <!-- move highlights -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="moveHighlightsMode" style="min-width:70px;font-size:.85rem;opacity:.8">
+                  Move&nbsp;Highlights
+                </label>
+                <select id="moveHighlightsMode" style="flex:1;background:#23252b;color:#f2f2f2;border:1px solid #2d3037;border-radius:8px;padding:6px 8px">
+                  <option value="on" selected>On</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+
+              <!-- empty square grey slider -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="emptyGreyRange" style="min-width:70px;font-size:.85rem;opacity:.8">Squares</label>
+                <input id="emptyGreyRange" type="range" min="0" max="255" step="1" style="flex:1">
+                <div id="emptyGreySwatch" style="width:16px;height:16px;border:1px solid #2d3037;border-radius:4px"></div>
+              </div>
+
+              <!-- grid line gray slider -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="gridLineRange" style="min-width:70px;font-size:.85rem;opacity:.8">Grid</label>
+                <input id="gridLineRange" type="range" min="0" max="255" step="1" style="flex:1">
+                <div id="gridLineSwatch" style="width:16px;height:16px;border:1px solid #2d3037;border-radius:4px"></div>
+              </div>
+
+              <!-- sfx volume slider -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label for="sfxVolume" style="min-width:70px;font-size:.85rem;opacity:.8">Volume</label>
+                <input id="sfxVolume" type="range" min="0" max="100" step="1" style="flex:1">
+                <div id="sfxVolumeVal" style="width:30px;text-align:right;font-size:.85rem;opacity:.8"></div>
+              </div>
+
+              <!-- save/load buttons (below volume) -->
+              <div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+                <label style="min-width:70px;font-size:.85rem;opacity:.0">&nbsp;</label>
+                <div style="display:flex;gap:.6rem;flex:1">
+                  <button id="actSave" >Save</button>
+                  <button id="actLoad" >Load</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+      <!-- dynamic layout helper: align footer to board bottom when possible; let the rules hint expand to available space above the footer -->
+    <script type="module" src="./renderer.ts"></script>
+  </body>
+</html>

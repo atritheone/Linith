@@ -1,0 +1,678 @@
+/* -------------------- design tokens -------------------- */
+:root {
+  --bg: #0f0f12;          /* app background */
+  --panel: #17171c;       /* panel background */
+  --text: #f2f2f2;        /* primary text */
+  --muted: #a8acb3;       /* muted text */
+  --accent: #ffd166;      /* sun accent */
+  --accent2: #8ab4ff;     /* moon accent */
+  --grey: #808080;        /* empty squares */
+  --white: #ffffff;       /* swan (tile bg) */
+  --black: #111216;       /* stone (tile bg) */
+  --frozen: #bed1f7;      /* frozen swan tint */
+  --grid: #404040;        /* grid lines */
+  --panel-w: 300px;
+  --gap: 26px;
+  --pad: 18px;
+  --gut-x: 18px;
+  --gut-y: 18px;
+  --base-h: 100vh;
+  --board: calc(var(--base-h) - (2 * var(--pad)) - var(--gut-y));
+  --base-w: calc( (2 * var(--pad)) + var(--gut-x) + var(--board) + var(--gap) + var(--panel-w) );
+}
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple color Emoji", "Segoe UI Emoji";
+  height: 100%;
+}
+
+/* -------------------- app layout -------------------- */
+.wrap {
+  display: grid !important;
+  grid-template-columns: var(--board) var(--panel-w) !important;
+  gap: var(--gap) !important;
+  padding: var(--pad) !important;
+  box-sizing: border-box;
+  max-width: unset !important;
+  margin: 0 !important;
+  width: 100%;
+  height: 100%;
+}
+
+/* -------------------- board shell -------------------- */
+.boardWrap {
+  overflow: visible;
+  position: relative !important;
+  width: calc(var(--gut-x) + var(--board)) !important;
+  height: calc(var(--gut-y) + var(--board)) !important;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  border: 1px solid var(--grid);
+  background: #22242a;
+  border-radius: 0;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  width: var(--board) !important;
+  height: var(--board) !important;
+}
+
+/* -------------------- cells -------------------- */
+.cell {
+  position: relative;
+  background: var(--grey);
+  user-select: none;
+  cursor: pointer;
+}
+
+.cell::before {
+  content: "";
+  display: block;
+  padding-top: 100%;
+}
+
+.inner {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: filter 120ms ease, transform 60ms ease;
+  border-left: 1px solid var(--grid);
+  border-top: 1px solid var(--grid);
+  box-sizing: border-box;
+}
+
+.cell:nth-child(-n+10) .inner {
+  border-top: none;
+}
+
+.cell:nth-child(10n+1) .inner {
+  border-left: none;
+}
+
+.inner:hover {
+  filter: brightness(1.08);
+}
+
+.inner:active {
+  transform: scale(0.985);
+}
+
+/* -------------------- piece glyphs -------------------- */
+.glyph {
+  display: grid;
+  place-items: center;
+
+  width: 25%;
+  height: 25%;
+
+  min-width: 25%;
+  min-height: 25%;
+  max-width: 25%;
+  max-height: 25%;
+}
+
+.glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pieceSun {
+  color: var(--accent);
+}
+
+.pieceMoon {
+  color: var(--accent2);
+}
+
+.swan {
+  background: var(--white);
+  color: #111;
+}
+
+.stone {
+  background: #000;
+  color: #fff;
+}
+
+.frozen {
+  background: var(--frozen) !important;
+}
+
+/* Ensure frozen tint visually affects glyphs/icons too by placing an overlay above content */
+.inner.frozen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--frozen);
+  opacity: 0.7; /* semi-transparent so base color shows through */
+  pointer-events: none; /* do not block clicks */
+  z-index: 2; /* above glyphs and inner content */
+}
+
+.selectedMove {
+  outline: 3px solid #7ad3ff;
+  outline-offset: -3px;
+}
+
+.selectedPush {
+  outline: 3px solid #b388ff;
+  outline-offset: -3px;
+}
+
+/* -------------------- side panel -------------------- */
+.panel {
+  padding: 14px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  overflow: hidden;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.panelHead > #timer,
+.panelHead > #chessClocks {
+  margin-left: auto;
+}
+
+.timer {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  color: #ff2b2b;
+  text-shadow: 0 0 6px rgba(255, 43, 43, 0.6), 0 0 14px rgba(255, 43, 43, 0.25);
+  font-weight: 700;
+  line-height: 1;
+  min-width: 84px;
+  text-align: right;
+  white-space: nowrap;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.timer.hidden,
+.clocks.hidden {
+  display: none;
+}
+
+.clocks {
+  margin-left: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.clock {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ff2b2b;
+  text-shadow: 0 0 6px rgba(255, 43, 43, 0.6), 0 0 14px rgba(255, 43, 43, 0.25);
+  background: #23252b;
+  border: 1px solid #2d3037;
+  border-radius: 8px;
+  padding: 4px 8px;
+  user-select: none;
+  min-width: 58px;
+  text-align: center;
+}
+
+.clock.sun.active {
+  color: var(--accent);            /* sun yellow */
+  box-shadow: 0 0 10px rgba(255, 209, 102, .35);
+}
+.clock.moon.active {
+  color: var(--accent2);           /* moon blue */
+  box-shadow: 0 0 10px rgba(138, 180, 255, .35);
+}
+
+.title {
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+
+button {
+  background: #23252b;
+  color: var(--text);
+  border: 1px solid #2d3037;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2a2d35;
+}
+
+button[disabled] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+button.muted {
+  opacity: 0.45;
+  filter: grayscale(25%);
+  cursor: default;
+}
+
+button.muted:focus {
+outline: none;
+}
+
+.confirm {
+  text-align: center;
+  margin-top: 0px;
+  margin-left: 4px;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+  margin-left: 4px;
+}
+
+.confirm-buttons button {
+  background: var(--panel);
+  border: 1px solid var(--grey);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.confirm-buttons button:hover {
+  background: var(--muted);
+  color: var(--bg);
+}
+
+#turnInfo {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sun {
+  background: #3b2b00;
+  color: var(--accent);
+  border: 1px solid #5a4200;
+}
+
+.moon {
+  background: #132038;
+  color: var(--accent2);
+  border: 1px solid #1e3358;
+}
+
+/* -------------------- start menu & log -------------------- */
+.startMenu {
+  display: grid;
+  gap: 8px;
+}
+
+.startMenu > button {
+  width: 100%;
+  padding: 12px;
+  font-weight: 600;
+}
+
+.startMenu .muted {
+  opacity: .75;
+  font-weight: 500;
+}
+
+.log {
+  height: 160px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  background: #121316;
+  border: 1px solid #23252b;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
+  display: none;
+  cursor: default;
+}
+
+.log > div { cursor: default; }
+.log a { cursor: default; }
+
+.log > div.is-active {
+  position: relative;
+  color: var(--bg);
+  z-index: 1;
+}
+
+.log > div.is-active::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 0px;
+  bottom: -2px;
+  background: var(--text);
+  border-radius: 6px;
+  z-index: -1;
+  transition: background 0.15s ease;
+}
+
+.log > div.is-active a {
+  color: inherit;
+}
+
+/* -------------------- replay controls -------------------- */
+.replayControls {
+  display:none;
+  gap:.6rem;
+  align-items:center;
+  margin-top:10px;
+}
+
+.replayControls button {
+  background:#23252b;
+  color:#f2f2f2;
+  border:1px solid #2d3037;
+  border-radius:8px;
+  padding:6px 10px;
+}
+
+.replayControls .rangeWrap {
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  flex:1;
+}
+
+.replayControls input[type="range"] {
+  flex:1;
+}
+
+.replayControls .val {
+  min-width:32px;
+  text-align:right;
+  opacity:.85;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: clamp(10px, 1.6vw, 12px);
+  margin-top: 6px;
+  text-align: justify;
+  max-height: 35vh;
+  overflow: auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding-right: 4px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: clamp(10px, 1.4vw, 11px);
+  margin-top: 10px;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+}
+
+.sep {
+  height: 1px;
+  background: #23252b;
+  margin: 10px 0;
+  opacity: 0
+}
+
+/* -------------------- footer settings button -------------------- */
+#gear-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  margin-left: 0;
+}
+
+/* -------------------- axis labels -------------------- */
+.yLabels {
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  bottom: var(--gut-y);
+  width: var(--gut-x);
+  display: grid;
+  grid-template-rows: repeat(10, 1fr);
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.xLabels {
+  position: absolute !important;
+  left: var(--gut-x);
+  right: 0;
+  bottom: 0;
+  height: var(--gut-y);
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  justify-items: center;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+/* -------------------- split chooser (place swan/stone) -------------------- */
+.chooser {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  box-sizing: border-box;
+}
+
+.chooser .half {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  cursor: pointer;
+  transition: filter 120ms ease, transform 60ms ease;
+  font-size: 12px;
+}
+
+.chooser .half.left {
+  background: var(--white);
+  color: #111;
+  border-right: 1px solid var(--grid);
+}
+
+.chooser .half.right {
+  background: #000;
+  color: #fff;
+}
+
+.chooser .half:hover {
+  filter: brightness(1.06);
+}
+
+.chooser .half:active {
+  transform: scale(0.985);
+}
+
+/* -------------------- move hints & splits -------------------- */
+.moveHint {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  outline: 3px solid;
+  outline-offset: -3px;
+  opacity: .9;
+  border-radius: 0px;
+}
+
+.moveHint.green {
+  outline-color: #2ecc71;
+  box-shadow: inset 0 0 0 3px rgba(46,204,113,.3);
+}
+
+.moveHint.red {
+  outline-color: #e74c3c;
+  box-shadow: inset 0 0 0 3px rgba(231,76,60,.25);
+}
+
+.moveSplit {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: auto;
+}
+
+.moveSplit .moveHalf {
+  flex: 1;
+  cursor: pointer;
+  outline: 3px solid;
+  outline-offset: -3px;
+  opacity: .9;
+}
+
+.moveSplit .left.green {
+  outline-color: #2ecc71;
+  box-shadow: inset 0 0 0 3px rgba(46,204,113,.30);
+}
+
+.moveSplit .left.red {
+  outline-color: #e74c3c;
+  box-shadow: inset 0 0 0 3px rgba(231,76,60,.25);
+}
+
+.moveSplit .right.sel {
+  outline-color: #7ad3ff;
+  box-shadow: inset 0 0 0 3px rgba(122,211,255,.25);
+}
+
+.moveSplit .right.selPush {
+  outline-color: #b388ff;
+  box-shadow: inset 0 0 0 3px rgba(179,136,255,.25);
+}
+
+.stage {
+  place-items: center;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  background: var(--bg);
+}
+
+.frame {
+  transform-origin: center center;
+  height: 100vh;
+  width: min(var(--base-w), 100vw);
+  margin: 0 auto;
+  transform: none !important;
+}
+
+/* -------------------- hint highlights -------------------- */
+.hintMark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0;
+  outline: 3px solid;
+  outline-offset: -3px;
+  opacity: .95;
+}
+.hintMark.best  {
+  outline-color: #2ecc71;
+  box-shadow: inset 0 0 0 2px rgba(46,204,113,.35);
+  z-index: 7;
+}
+
+.hintMark.worst {
+  outline-color: #e74c3c;
+  box-shadow: inset 0 0 0 2px rgba(231,76,60,.30);
+  z-index: 6;
+}
+
+/* -------------------- recent move/placement highlights -------------------- */
+.recentMark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0;
+  outline: 3px solid #ff66cc; /* pink */
+  outline-offset: -3px;
+  opacity: .95;
+  box-shadow: inset 0 0 0 2px rgba(255,102,204,.28);
+  z-index: 9; /* above hints */
+}
+.recentMark.from { filter: brightness(1.03); }
+.recentMark.to   { box-shadow: inset 0 0 0 3px rgba(255,102,204,.35); }
+
+/* -------------------- responsive -------------------- */
+@media (max-width: 980px){
+.wrap {
+  grid-template-columns: var(--board) var(--panel-w) !important;
+}
+
+.panel {
+  order: 0 !important;
+}
+
+.boardWrap {
+  order: 0 !important;
+}
+}
