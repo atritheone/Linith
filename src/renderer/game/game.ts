@@ -2410,9 +2410,11 @@ export function initGame(): void {
       let hasAdjMine=false, adjEnemy=false;
       for (const [nr,nc] of neighbours4(r,c)) {
         const v = cell(nr,nc);
-        if (v===SWAN_SUN||v===SWAN_MOON||v===FROZEN_SUN||v===FROZEN_MOON){
-          if (samePlayerSwan(v,p)) hasAdjMine=true; else adjEnemy=true;
-        }
+        if (samePlayerSwan(v,p)) hasAdjMine=true;
+      }
+      for (const [nr,nc] of neighbours8(r,c)) {
+        const v = cell(nr,nc);
+        if (enemySwan(v,p)) { adjEnemy=true; break; }
       }
       if (!hasAdjMine) { log('Swan placement must be adjacent to one of your Swans.'); return false; }
       if (adjEnemy)    { log('Swan cannot be placed adjacent to an opponent Swan.'); return false; }
@@ -3007,8 +3009,9 @@ export function initGame(): void {
             if (!isSwan(vv)) continue;
             // If adjacent to an enemy swan (relative to the moving side), it's shared
             if (enemySwan(vv, playerMoving)) { shared = true; break; }
-            // If adjacent to a same-side ACTIVE swan that is not moving, it's shared
-            if (samePlayerSwan(vv, playerMoving) && isActiveSwan(vv) && !moving.has(xr*SIZE + xc)) { shared = true; break; }
+            // Frozen friendly Swans are stationary and share/anchor the Stone too.
+            const movingFriendly = samePlayerSwan(vv, playerMoving) && isActiveSwan(vv) && moving.has(xr*SIZE + xc);
+            if (samePlayerSwan(vv, playerMoving) && !movingFriendly) { shared = true; break; }
           }
           if (shared) continue;
 
@@ -3224,7 +3227,7 @@ export function initGame(): void {
         const opponentLoss = (current === SUN) ? (enc.frozeMoon + enc.sealedMoon)
             : (enc.frozeSun + enc.sealedSun);
         let nextMovesLeft = movesLeft;
-        if (opponentLoss > 0) nextMovesLeft++;
+        nextMovesLeft += opponentLoss;
         nextMovesLeft--; // spend this action
         let nextCurrent, nextMoves;
         if (nextMovesLeft > 0) {

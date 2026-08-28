@@ -21,6 +21,7 @@
     "dist:linux": "npm run build && electron-builder --linux deb",
     "dist:mac": "npm run build && electron-builder --mac dmg zip",
     "test": "node --import tsx --test tests/**/*.test.ts",
+    "arena:legacy": "node --import tsx scripts/compare-legacy-ai.ts",
     "preview": "electron-vite preview"
   },
   "build": {

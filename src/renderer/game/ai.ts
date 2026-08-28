@@ -2,8 +2,18 @@
 // from rendering and platform wrappers.
 // @ts-nocheck -- incremental migration boundary for the inherited AI engine.
 import { AI_STYLES } from "./aiStyles";
+import { computeFreezesOn } from "./encirclement";
+import {
+  countTotalSwans as countTotalSwansOn,
+  simulatePush as simulatePushOn,
+  simulateSwanMove as simulateSwanMoveOn
+} from "./rulesEngine";
 
 export function linithAI(board, current, difficulty = 'hard') {
+
+      // Unknown persisted values historically fell into Easy. Normalize them at
+      // the engine boundary so a typo or future value cannot silently weaken AI.
+      difficulty = ['easy', 'medium', 'hard'].includes(difficulty) ? difficulty : 'medium';
 
       // ----- constants & helpers -----
       const SIZE = 10;
@@ -105,25 +115,9 @@ export function linithAI(board, current, difficulty = 'hard') {
       }
 
       function freezeEncircled(b){
-        const res = { frozeSun:0, frozeMoon:0, sealedSun:0, sealedMoon:0 };
-        const groups = collectActiveGroups(b);
-        for(const owner of [SUN,MOON]){
-          for(const comp of groups[owner]){
-            if(groupEncircled(b, comp, owner)){
-              const activeBefore = countActiveSwans(owner, b);
-              for(const [r,c] of comp){
-                const v=get(b,r,c);
-                set(b,r,c, v===SWAN_SUN?FROZEN_SUN:FROZEN_MOON);
-              }
-              if(comp.length === activeBefore){
-                owner===SUN ? (res.sealedSun += comp.length) : (res.sealedMoon += comp.length);
-              } else {
-                owner===SUN ? (res.frozeSun  += comp.length) : (res.frozeMoon  += comp.length);
-              }
-            }
-          }
-        }
-        return res;
+        const resolved = computeFreezesOn(b);
+        for (let r=0; r<SIZE; r++) for (let c=0; c<SIZE; c++) b[r][c] = resolved.nb[r][c];
+        return resolved;
       }
 
       const ringCache = new WeakMap();
@@ -169,6 +163,7 @@ export function linithAI(board, current, difficulty = 'hard') {
           if(k<=3) score += 2.0;
           if(k<=1) score += 4.0;
         }
+        entry[player] = score;
         return score;
       }
 
@@ -294,25 +289,27 @@ export function linithAI(board, current, difficulty = 'hard') {
         return score;
       }
 
-      function evaluateStyled(bBefore, bAfter, myLibBeforeOverride = null, oppLibBeforeOverride = null){
+      function evaluateStyled(bBefore, bAfter, myLibBeforeOverride = null, oppLibBeforeOverride = null, perspective = current){
+        const perspectiveOpp = perspective===SUN ? MOON : SUN;
         const nb = clone(bAfter);
         const res = freezeEncircled(nb);
-        const myActiveAfter  = countActiveSwans(current, nb);
-        const oppActiveAfter = countActiveSwans(OPP, nb);
+        const myActiveAfter  = countActiveSwans(perspective, nb);
+        const oppActiveAfter = countActiveSwans(perspectiveOpp, nb);
         if (oppActiveAfter===0 && myActiveAfter>0) return +1e9;
         if (myActiveAfter===0 && oppActiveAfter>0) return -1e9;
+        if (myActiveAfter===0 && oppActiveAfter===0) return 0;
 
-        const myLibBefore  = (myLibBeforeOverride  ?? libertiesFor(current, bBefore));
-        const oppLibBefore = (oppLibBeforeOverride ?? libertiesFor(OPP,     bBefore));
-        const myLibAfter   = libertiesFor(current, nb);
-        const oppLibAfter  = libertiesFor(OPP,     nb);
+        const myLibBefore  = (myLibBeforeOverride  ?? libertiesFor(perspective,    bBefore));
+        const oppLibBefore = (oppLibBeforeOverride ?? libertiesFor(perspectiveOpp, bBefore));
+        const myLibAfter   = libertiesFor(perspective,    nb);
+        const oppLibAfter  = libertiesFor(perspectiveOpp, nb);
 
         const myΔ  = myLibAfter  - myLibBefore;
         const oppΔ = oppLibAfter - oppLibBefore;
 
-        const frozeGain = (current===SUN ? (res.frozeMoon+res.sealedMoon) : (res.frozeSun +res.sealedSun));
-        const selfLoss  = (current===SUN ? (res.frozeSun +res.sealedSun ) : (res.frozeMoon+res.sealedMoon));
-        const ring      = enemyRingPressure(nb, current);
+        const frozeGain = (perspective===SUN ? (res.frozeMoon+res.sealedMoon) : (res.frozeSun +res.sealedSun));
+        const selfLoss  = (perspective===SUN ? (res.frozeSun +res.sealedSun ) : (res.frozeMoon+res.sealedMoon));
+        const ring      = enemyRingPressure(nb, perspective);
         const momentum  = bothAtSix(bBefore) ? 10 : 0;
 
         const wFreeze     = (ST.wFreeze     ?? 500);
@@ -330,8 +327,8 @@ export function linithAI(board, current, difficulty = 'hard') {
 
         let terrΔ = 0;
         if (wSpace !== 0){
-          const terrBefore = territoryAdvantage(bBefore, current);
-          const terrAfter  = territoryAdvantage(nb,      current);
+          const terrBefore = territoryAdvantage(bBefore, perspective);
+          const terrAfter  = territoryAdvantage(nb,      perspective);
           terrΔ = terrAfter - terrBefore;
         }
 
@@ -624,6 +621,29 @@ export function linithAI(board, current, difficulty = 'hard') {
         return nb;
       }
 
+      // Use the corrected pure successor model shared by AI regression tests. The
+      // inherited simulators above remain temporarily as readable provenance,
+      // but all production call sites route through these corrected adapters.
+      function simulateCorrectMoveSubset(b, p, subset, dir){
+        const result = simulateSwanMoveOn(
+          b,
+          p,
+          subset.map(([r,c]) => ({r,c})),
+          dir
+        );
+        return result ? result.board : null;
+      }
+
+      function simulateCorrectPushSubset(b, p, subset, dir){
+        const result = simulatePushOn(
+          b,
+          p,
+          subset.map(([r,c]) => ({r,c})),
+          dir
+        );
+        return result ? result.board : null;
+      }
+
       // ===== capability profiles =====
       const CAP = (()=>{
         if (difficulty==='hard')   return { MAX_SUBSET: 99, LOCAL_R: 99, MAX_STONES: 999, BEAM: 999, PROBE: 0, MUST_TACTICS: true };
@@ -639,9 +659,10 @@ export function linithAI(board, current, difficulty = 'hard') {
           // freezeEncircled mutates, so pass a clone
           const res = freezeEncircled(clone(b2));
           const enemySealed = (current===SUN) ? res.sealedMoon : res.sealedSun;
+          const selfSealed = (current===SUN) ? res.sealedSun : res.sealedMoon;
           const enemyFrozen = (current===SUN) ? (res.frozeMoon+res.sealedMoon)
                                               : (res.frozeSun +res.sealedSun);
-          if (enemyFrozen > 0){
+          if (enemyFrozen > 0 && !(enemySealed > 0 && selfSealed > 0)){
             // Heavily prioritize true seals, then general freezes; add eval as a tie-breaker
             const sc = (enemySealed>0 ? 1e9 : 1e7) + (enemyFrozen*1000) + evaluateStyled(board, b2);
             wins.push({ type:'stone', r, c, score: sc });
@@ -706,7 +727,7 @@ export function linithAI(board, current, difficulty = 'hard') {
           // locality - at least one moving swan must be in local zone
           if (!subset.some(([r,c])=>inLocality(r,c))) continue;
           for(const dir of DIRS8){
-            const b2 = simulateMoveSubset(board, current, subset, dir);
+            const b2 = simulateCorrectMoveSubset(board, current, subset, dir);
             if(!b2) continue;
             pushMove(subset, dir, evaluateStyled(board, b2));
           }
@@ -721,7 +742,7 @@ export function linithAI(board, current, difficulty = 'hard') {
           // locality: at least one of the pushed swans must be near our activity
           if (!subset.some(([r,c])=>inLocality(r,c))) continue;
           for (const dir of DIRS8){
-            const b2 = simulatePushSubset(board, current, subset, dir);
+            const b2 = simulateCorrectPushSubset(board, current, subset, dir);
             if (!b2) continue;
             // light heuristic bonus: pushing usually creates tactical pressure
             let sc = evaluateStyled(board, b2);
@@ -739,7 +760,7 @@ export function linithAI(board, current, difficulty = 'hard') {
         }
         for (const [r,c] of coords){
           for (const dir of DIRS8){
-            const b2 = simulateMoveSubset(board, current, [[r,c]], dir);
+            const b2 = simulateCorrectMoveSubset(board, current, [[r,c]], dir);
             if (b2) return { type:'move', dir, swans:[{r,c}], score:0 };
           }
         }
@@ -759,7 +780,10 @@ export function linithAI(board, current, difficulty = 'hard') {
           return nb;
         }
         if (a.type === 'move') {
-          return simulateMoveSubset(b, player, a.swans.map(s => [s.r, s.c]), a.dir);
+          return simulateCorrectMoveSubset(b, player, a.swans.map(s => [s.r, s.c]), a.dir);
+        }
+        if (a.type === 'push') {
+          return simulateCorrectPushSubset(b, player, a.swans.map(s => [s.r, s.c]), a.dir);
         }
         return null;
       }
@@ -769,6 +793,7 @@ export function linithAI(board, current, difficulty = 'hard') {
         if (!b2) return 0;
         const nb = clone(b2);
         const res = freezeEncircled(nb);
+        if (res.sealedSun > 0 && res.sealedMoon > 0) return 0;
         return (player === SUN
           ? (res.frozeMoon + res.sealedMoon)
           : (res.frozeSun + res.sealedSun));
@@ -806,22 +831,37 @@ export function linithAI(board, current, difficulty = 'hard') {
         // stones
         for (const [r,c] of legalStonePlacements(b, player)){
           const b2=clone(b); set(b2,r,c,STONE);
-          const sc = evaluateStyled(b, b2);
+          const sc = evaluateStyled(b, b2, null, null, player);
           push({type:'stone', r, c, score:sc});
         }
         // placements
-        if (countActiveSwans(player,b)<6){
+        if (countTotalSwansOn(b, player)<6){
           for (const [r,c] of legalSwanPlacements(b, player)){
             const b2=clone(b); set(b2,r,c, player===SUN?SWAN_SUN:SWAN_MOON);
-            push({type:'swan', r, c, score:evaluateStyled(b,b2)});
+            push({type:'swan', r, c, score:evaluateStyled(b,b2,null,null,player)});
           }
         }
         // single moves
         for (const [r,c] of mySwans){
           for (const dir of DIRS8){
-            const b2 = simulateMoveSubset(b, player, [[r,c]], dir);
+            const b2 = simulateCorrectMoveSubset(b, player, [[r,c]], dir);
             if(!b2) continue;
-            push({type:'move', dir, swans:[{r,c}], score:evaluateStyled(b,b2)});
+            push({type:'move', dir, swans:[{r,c}], score:evaluateStyled(b,b2,null,null,player)});
+          }
+        }
+        // Pushes were generated by the main selector but omitted from reply
+        // simulation. Include every immediately tactical push plus ordinary
+        // single-Swan pushes so the response probe can see this action class.
+        const pushed = activeSwansOf(b, player===SUN ? MOON : SUN);
+        for (const subset of allSwanSubsets(pushed)){
+          if (subset.length > CAP.MAX_SUBSET) continue;
+          for (const dir of DIRS8){
+            const b2 = simulateCorrectPushSubset(b, player, subset, dir);
+            if (!b2) continue;
+            const action = {type:'push', dir, swans:subset.map(([r,c])=>({r,c}))};
+            const tactical = freezeDeltaForPlayer(b, action, player) > 0;
+            if (!tactical && subset.length > 1) continue;
+            push({...action, score:evaluateStyled(b,b2,null,null,player)});
           }
         }
         return out.sort((a,b)=>b.score-a.score);
@@ -879,7 +919,7 @@ export function linithAI(board, current, difficulty = 'hard') {
           if(!b2) continue;
           const oppActs = generateGreedyCandidates(b2, OPP);
           const oppBest = oppActs[0];
-          const finalScore = oppBest ? (-oppBest.score) : a.score;
+          const finalScore = oppBest ? (a.score - oppBest.score) : a.score;
           if (finalScore > bestProbeScore){ bestProbeScore = finalScore; bestByProbe = a; }
         }
         if (bestByProbe && Math.random()<0.70)
