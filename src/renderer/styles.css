@@ -201,7 +201,7 @@ html, body {
   box-sizing: border-box;
   min-width: 0;
   min-height: 0;
-  padding: 18px 16px 10px;
+  padding: 0 16px 10px;
   display: flex;
   flex-direction: column;
   color: var(--ui-text);
@@ -212,10 +212,10 @@ html, body {
 
 .panelHead {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   flex: 0 0 auto;
-  min-height: 43px;
+  min-height: 0;
   padding-bottom: 13px;
   border-bottom: 1px solid var(--ui-line);
 }
@@ -776,7 +776,7 @@ button.muted {
 }
 
 .settingsTitle {
-  margin-top: 3px;
+  margin-top: 0;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: .03em;
@@ -1106,11 +1106,11 @@ button.muted {
 
 @media (max-height: 680px) {
   .panel {
-    padding-top: 12px;
+    padding-top: 0;
   }
 
   .panelHead {
-    min-height: 34px;
+    min-height: 0;
     padding-bottom: 9px;
   }
 

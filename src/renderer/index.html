@@ -58,13 +58,13 @@
                   <span class="modeName">Local game</span>
                   <span class="modeDescription">Two players on this device</span>
                 </button>
-                <button id="btnAiSun" type="button" class="modeChoice modeChoiceSun">
-                  <span class="modeName">Play as Moon</span>
-                  <span class="modeDescription">AI controls Sun</span>
-                </button>
-                <button id="btnAiMoon" type="button" class="modeChoice modeChoiceMoon">
+                <button id="btnAiMoon" type="button" class="modeChoice modeChoiceSun">
                   <span class="modeName">Play as Sun</span>
                   <span class="modeDescription">AI controls Moon</span>
+                </button>
+                <button id="btnAiSun" type="button" class="modeChoice modeChoiceMoon">
+                  <span class="modeName">Play as Moon</span>
+                  <span class="modeDescription">AI controls Sun</span>
                 </button>
               </section>
 
@@ -100,21 +100,21 @@
               <button id="gear-btn" type="button" class="utilityButton" aria-label="Settings" aria-controls="gear-panel" aria-expanded="false">Settings</button>
               <div id="gear-panel" class="settingsPanel" role="dialog" aria-label="Settings" hidden>
                 <div class="settingsHeader">
-                  <div><div class="sectionLabel">Configuration</div><div class="settingsTitle">Settings</div></div>
+                  <div class="settingsTitle">Settings</div>
                   <button id="settingsClose" type="button" class="iconButton" aria-label="Close settings">&#215;</button>
                 </div>
 
                 <section class="settingsSection settingsSectionOpponent" aria-labelledby="opponentSettingsLabel">
                   <h2 id="opponentSettingsLabel">Opponent</h2>
-                  <label class="settingsRow" for="aiDifficulty"><span>AI difficulty</span><select id="aiDifficulty"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard" selected>Hard</option><option value="very_hard">Very Hard</option></select></label>
-                  <label class="settingsRow" for="aiStyle"><span>AI style</span><select id="aiStyle"><option value="doctrinal" selected>Doctrinal</option><option value="constrictor">Constrictor</option><option value="rupture">Rupture</option><option value="blizzard">Blizzard</option><option value="librarian">Librarian</option><option value="swarm">Swarm</option><option value="fortress">Fortress</option></select></label>
+                  <label class="settingsRow" for="aiDifficulty"><span>AI Difficulty</span><select id="aiDifficulty"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard" selected>Hard</option><option value="very_hard">Very Hard</option></select></label>
+                  <label class="settingsRow" for="aiStyle"><span>AI Style</span><select id="aiStyle"><option value="doctrinal" selected>Doctrinal</option><option value="constrictor">Constrictor</option><option value="rupture">Rupture</option><option value="blizzard">Blizzard</option><option value="librarian">Librarian</option><option value="swarm">Swarm</option><option value="fortress">Fortress</option></select></label>
                   <p id="aiStyleDescription" class="settingsDescription"></p>
                 </section>
 
                 <section class="settingsSection" aria-labelledby="matchSettingsLabel">
                   <h2 id="matchSettingsLabel">Match</h2>
                   <label class="settingsRow" for="clockMode"><span>Clock</span><select id="clockMode"><option value="off" selected>Off</option><option value="stopwatch">Stopwatch</option><option value="chess-3">3 Minutes</option><option value="chess-5">5 Minutes</option><option value="chess-10">10 Minutes</option></select></label>
-                  <label class="settingsRow" for="moveHighlightsMode"><span>Move highlights</span><select id="moveHighlightsMode"><option value="on" selected>On</option><option value="off">Off</option></select></label>
+                  <label class="settingsRow" for="moveHighlightsMode"><span>Move Highlights</span><select id="moveHighlightsMode"><option value="on" selected>On</option><option value="off">Off</option></select></label>
                 </section>
 
                 <section class="settingsSection" aria-labelledby="boardSettingsLabel">
@@ -129,8 +129,8 @@
                 </section>
 
                 <section class="settingsSection settingsData" aria-labelledby="dataSettingsLabel">
-                  <h2 id="dataSettingsLabel">Game data</h2>
-                  <div class="settingsActions"><button id="actSave" type="button">Save record</button><button id="actLoad" type="button">Load replay</button></div>
+                  <h2 id="dataSettingsLabel">Game Data</h2>
+                  <div class="settingsActions"><button id="actSave" type="button">Save Record</button><button id="actLoad" type="button">Load Replay</button></div>
                 </section>
               </div>
             </footer>
