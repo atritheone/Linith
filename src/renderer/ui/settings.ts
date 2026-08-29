@@ -1,11 +1,14 @@
 import { SFX } from "../sound";
+import { AI_STYLE_LIST, aiPersonality } from "../game/aiStyles";
 
 export function initSettings(): void {
   const root = document.documentElement;
   const gearButton = byId<HTMLButtonElement>("gear-btn");
   const panel = byId<HTMLElement>("gear-panel");
+  const closeButton = byId<HTMLButtonElement>("settingsClose");
   const difficulty = byId<HTMLSelectElement>("aiDifficulty");
   const style = byId<HTMLSelectElement>("aiStyle");
+  const styleDescription = byId<HTMLElement>("aiStyleDescription");
   const clock = byId<HTMLSelectElement>("clockMode");
   const highlights = byId<HTMLSelectElement>("moveHighlightsMode");
   const volume = byId<HTMLInputElement>("sfxVolume");
@@ -15,25 +18,60 @@ export function initSettings(): void {
   const greySwatch = byId<HTMLElement>("emptyGreySwatch");
   const gridSwatch = byId<HTMLElement>("gridLineSwatch");
 
-  if (!panel || !grey || !grid || !greySwatch || !gridSwatch) {
+  if (!panel) {
     return;
   }
 
+  if (style) {
+    style.replaceChildren(...AI_STYLE_LIST.map((profile) => {
+      const option = document.createElement("option");
+      option.value = profile.id;
+      option.textContent = profile.label;
+      option.title = profile.goal;
+      return option;
+    }));
+  }
+
+  const setPanelOpen = (open: boolean, restoreFocus = false): void => {
+    panel.hidden = !open;
+    gearButton?.setAttribute("aria-expanded", String(open));
+    if (open) {
+      closeButton?.focus();
+    } else if (restoreFocus) {
+      gearButton?.focus();
+    }
+  };
+
   gearButton?.addEventListener("click", (event) => {
     event.stopPropagation();
-    panel.style.display = panel.style.display === "block" ? "none" : "block";
+    setPanelOpen(panel.hidden);
   });
+  closeButton?.addEventListener("click", () => setPanelOpen(false, true));
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (target instanceof Node && !panel.contains(target) && !gearButton?.contains(target)) {
-      panel.style.display = "none";
+      setPanelOpen(false);
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !panel.hidden) {
+      event.preventDefault();
+      setPanelOpen(false, true);
     }
   });
 
-  bindStoredSelect(difficulty, "linith_ai_difficulty", "medium", window.linithSetDifficulty);
-  bindStoredSelect(style, "linith_ai_style", "doctrinal", window.linithSetStyle);
-  bindStoredSelect(clock, "linith_clock_mode", "off", window.linithSetClockMode);
-  bindStoredSelect(highlights, "linith_move_highlights", "on", window.linithSetMoveHighlights);
+  bindStoredSelect(difficulty, "linith_ai_difficulty", "hard", (value) => window.linithSetDifficulty?.(value));
+  bindStoredSelect(style, "linith_ai_style", "doctrinal", (value) => window.linithSetStyle?.(value));
+  if (style && styleDescription) {
+    const describeStyle = (): void => {
+      const profile = aiPersonality(style.value);
+      styleDescription.textContent = profile.goal;
+    };
+    describeStyle();
+    style.addEventListener("change", describeStyle);
+  }
+  bindStoredSelect(clock, "linith_clock_mode", "off", (value) => window.linithSetClockMode?.(value));
+  bindStoredSelect(highlights, "linith_move_highlights", "on", (value) => window.linithSetMoveHighlights?.(value));
 
   if (volume && volumeValue) {
     const applyVolume = (): void => {
@@ -51,12 +89,14 @@ export function initSettings(): void {
     });
   }
 
-  const defaults = {
-    "--grey": readCssVariable(root, "--grey"),
-    "--grid": readCssVariable(root, "--grid")
-  };
-  bindColourSlider(root, grey, greySwatch, "--grey", defaults["--grey"]);
-  bindColourSlider(root, grid, gridSwatch, "--grid", defaults["--grid"]);
+  if (grey && grid && greySwatch && gridSwatch) {
+    const defaults = {
+      "--grey": readCssVariable(root, "--grey"),
+      "--grid": readCssVariable(root, "--grid")
+    };
+    bindColourSlider(root, grey, greySwatch, "--grey", defaults["--grey"], "linith_board_grey");
+    bindColourSlider(root, grid, gridSwatch, "--grid", defaults["--grid"], "linith_board_grid");
+  }
 }
 
 function bindStoredSelect(
@@ -83,20 +123,30 @@ function bindColourSlider(
   input: HTMLInputElement,
   swatch: HTMLElement,
   variable: "--grey" | "--grid",
-  defaultColour: string
+  defaultColour: string,
+  storageKey: string
 ): void {
-  const setColour = (colour: string): void => {
+  const setColour = (colour: string, persist: boolean): void => {
     const value = luminance(parseColour(colour));
     input.value = String(value);
     swatch.style.background = grey(value);
     root.style.setProperty(variable, colour);
+    if (persist) localStorage.setItem(storageKey, String(value));
   };
-  const apply = (): void => setColour(grey(Number(input.value)));
+  const apply = (): void => setColour(grey(Number(input.value)), true);
 
-  setColour(defaultColour);
+  const stored = localStorage.getItem(storageKey);
+  const storedValue = stored === null ? Number.NaN : Number(stored);
+  const initialColour = Number.isFinite(storedValue) && storedValue >= 0 && storedValue <= 255
+    ? grey(storedValue)
+    : defaultColour;
+  setColour(initialColour, false);
   input.addEventListener("input", apply);
   input.addEventListener("change", apply);
-  input.addEventListener("dblclick", () => setColour(defaultColour));
+  input.addEventListener("dblclick", () => {
+    localStorage.removeItem(storageKey);
+    setColour(defaultColour, false);
+  });
 }
 
 function parseColour(colour: string): { r: number; g: number; b: number } {

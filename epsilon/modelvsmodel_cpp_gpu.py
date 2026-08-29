@@ -48,7 +48,7 @@ def make_cpp_eval_fn(net: LinithPVNet, device: torch.device):
         if isinstance(env_or_envs, (list, tuple)):
             obs_list = []
             for env in env_or_envs:
-                # (6,10,10) float32 numpy from C++
+                # (8,10,10) float32 numpy from C++
                 obs = env.state.to_tensor()
                 obs_np = np.asarray(obs, dtype=np.float32)
                 obs_list.append(torch.from_numpy(obs_np))
@@ -118,7 +118,7 @@ class ReplayBuffer:
     def build_dataset(self):
         if not self.states:
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, ACTION_SIZE), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )
@@ -454,7 +454,7 @@ def generate_self_play_two_models(
     else:
         if not legacy_states:
             return (
-                np.empty((0,6,10,10), np.float32),
+                np.empty((0,8,10,10), np.float32),
                 np.empty((0,NUM_ACTIONS), np.float32),
                 np.empty((0,), np.float32),
             )

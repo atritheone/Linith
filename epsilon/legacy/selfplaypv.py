@@ -35,9 +35,9 @@ def make_cpp_eval_fn(net: LinithPVNet, device: torch.device):
     """
     def eval_fn(env: LinithEnv):
         # env.state.to_tensor() is a pybind11-exposed method on C++ GameState
-        obs = env.state.to_tensor()                 # (6,10,10) numpy from C++
+        obs = env.state.to_tensor()                 # (8,10,10) numpy from C++
         obs_np = np.array(obs, dtype=np.float32, copy=False)
-        obs_t = torch.from_numpy(obs_np).unsqueeze(0).to(device)  # [1,6,10,10]
+        obs_t = torch.from_numpy(obs_np).unsqueeze(0).to(device)  # [1,8,10,10]
 
         with torch.no_grad():
             logits, value = net(obs_t)              # logits: [1, ACTION_SIZE]
@@ -84,7 +84,7 @@ class ReplayBuffer:
     def build_dataset(self):
         if not self.states:
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, ACTION_SIZE), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )
@@ -187,7 +187,7 @@ def generate_self_play(
                 if not use_mcts:
                     t0 = time.time()
                     with torch.no_grad():
-                        obs_t = torch.from_numpy(obs).unsqueeze(0).to(dev)  # [1,6,10,10]
+                        obs_t = torch.from_numpy(obs).unsqueeze(0).to(dev)  # [1,8,10,10]
                         policy_logits, value = net(obs_t)  # logits: [1,ACTION_SIZE]
                         policy_logits = policy_logits[0]   # [ACTION_SIZE]
                     t1 = time.time()
@@ -444,7 +444,7 @@ def generate_self_play(
         if X.shape[0] == 0:
             print("\n[selfplaypv] No self-play games completed successfully; no dataset generated.")
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, NUM_ACTIONS), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )
@@ -452,7 +452,7 @@ def generate_self_play(
         if not legacy_states:
             print("\n[selfplaypv] No self-play games completed successfully; no dataset generated.")
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, NUM_ACTIONS), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )

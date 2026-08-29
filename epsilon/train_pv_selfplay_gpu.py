@@ -127,15 +127,18 @@ def get_sym_info():
     return _SYM_INFO
 
 
-def _compute_swan_permutation(x_single, square_map):
+def _compute_swan_permutation(x_single, square_map, *, enemy=False):
     """
-    x_single : (6,10,10) for one position
+    x_single : (8,10,10) for one position
 
     Returns perm[i] = new index of old swan i in the sorted-by-square order.
     """
     # channel 5 is 'current player' (1.0 = SUN, 0.0 = MOON)
     cur_is_sun = x_single[5, 0, 0] > 0.5
-    active_chan = 0 if cur_is_sun else 2  # SUN active / MOON active
+    if enemy:
+        active_chan = 2 if cur_is_sun else 0
+    else:
+        active_chan = 0 if cur_is_sun else 2
 
     swan_squares = []
     for r in range(BOARD_SIZE):
@@ -171,7 +174,7 @@ def augment_sample(x, pi, z, sym_index=None):
     """
     Apply one random (or chosen) D4 symmetry to a *single* sample.
 
-    x  : (6,10,10)
+    x  : (8,10,10)
     pi : (ACTION_SIZE,)
     z  : scalar
     """
@@ -192,7 +195,8 @@ def augment_sample(x, pi, z, sym_index=None):
     x_sym = tf(x)
 
     # swan index permutation
-    perm = _compute_swan_permutation(x, square_map)
+    move_perm = _compute_swan_permutation(x, square_map)
+    push_perm = _compute_swan_permutation(x, square_map, enemy=True)
 
     # remap policy
     pi_sym = np.zeros_like(pi)
@@ -216,7 +220,7 @@ def augment_sample(x, pi, z, sym_index=None):
         new_mask = 0
         for bit in range(MAX_SWANS):
             if mask & (1 << bit):
-                new_mask |= (1 << int(perm[bit]))
+                new_mask |= (1 << int(move_perm[bit]))
 
         new_subset_idx = MASK_TO_INDEX[new_mask]
 
@@ -229,16 +233,20 @@ def augment_sample(x, pi, z, sym_index=None):
             dst_idx = MOVE_GROUP_START + new_subset_idx * len(dirs) + new_dir_idx
             pi_sym[dst_idx] += v
 
-    # --- 3) pushes (one swan index + direction) ---
-    for swan_idx in range(MAX_SWANS):
-        new_swan_idx = int(perm[swan_idx])
+    # --- 3) pushes (enemy subset mask + direction) ---
+    for subset_idx, mask in enumerate(SUBSET_MASKS):
+        new_mask = 0
+        for bit in range(MAX_SWANS):
+            if mask & (1 << bit):
+                new_mask |= 1 << int(push_perm[bit])
+        new_subset_idx = MASK_TO_INDEX[new_mask]
         for dir_idx in range(len(dirs)):
-            src_idx = PUSH_START + swan_idx * len(dirs) + dir_idx
+            src_idx = PUSH_START + subset_idx * len(dirs) + dir_idx
             v = pi[src_idx]
             if v == 0.0:
                 continue
             new_dir_idx = int(dir_map[dir_idx])
-            dst_idx = PUSH_START + new_swan_idx * len(dirs) + new_dir_idx
+            dst_idx = PUSH_START + new_subset_idx * len(dirs) + new_dir_idx
             pi_sym[dst_idx] += v
 
     x_sym = np.ascontiguousarray(x_sym, dtype=np.float32)
@@ -258,7 +266,7 @@ class SelfPlayDataset(Dataset):
         self.Z = np.array(Z, dtype=np.float32, copy=False)
 
         assert self.X.shape[0] == self.Pi.shape[0] == self.Z.shape[0]
-        assert self.X.shape[1:] == (6, 10, 10)
+        assert self.X.shape[1:] == (8, 10, 10)
         assert self.Pi.shape[1] == ACTION_SIZE
 
         self.use_symmetry = use_symmetry
@@ -267,7 +275,7 @@ class SelfPlayDataset(Dataset):
         return self.X.shape[0]
 
     def __getitem__(self, idx):
-        x = self.X[idx]   # (6,10,10)
+        x = self.X[idx]   # (8,10,10)
         pi = self.Pi[idx] # (A,)
         z = self.Z[idx]   # ()
 
@@ -287,7 +295,7 @@ def apply_symmetry_augmentation(X, Pi, Z):
     """
     Real 8-way board symmetry augmentation for (X, Pi, Z).
 
-    X  : (N, 6, 10, 10) float32 state tensors
+    X  : (N, 8, 10, 10) float32 state tensors
     Pi : (N, ACTION_SIZE) policy over encoded actions
     Z  : (N,) value from current player's perspective
 
@@ -416,9 +424,9 @@ def apply_symmetry_augmentation(X, Pi, Z):
         )
 
     # ---------- 3. Helper: build swan index permutation for one position ----------
-    def compute_swan_permutation(x_single, square_map):
+    def compute_swan_permutation(x_single, square_map, *, enemy=False):
         """
-        x_single : (6,10,10) for one position
+        x_single : (8,10,10) for one position
         square_map : length 100 array mapping old square -> new square
 
         Returns:
@@ -426,7 +434,10 @@ def apply_symmetry_augmentation(X, Pi, Z):
         """
         # Current player channel is uniform 1.0 (SUN) or 0.0 (MOON)
         cur_is_sun = x_single[5, 0, 0] > 0.5
-        active_chan = 0 if cur_is_sun else 2  # SUN active or MOON active
+        if enemy:
+            active_chan = 2 if cur_is_sun else 0
+        else:
+            active_chan = 0 if cur_is_sun else 2
 
         # Collect all active swan squares for the current player
         swan_squares = []
@@ -471,7 +482,7 @@ def apply_symmetry_augmentation(X, Pi, Z):
     Z_list = []
 
     for idx in range(N):
-        x = X[idx]          # (6,10,10)
+        x = X[idx]          # (8,10,10)
         pi = Pi[idx]        # (ACTION_SIZE,)
         z = Z[idx]
 
@@ -484,7 +495,8 @@ def apply_symmetry_augmentation(X, Pi, Z):
             x_sym = tf(x)
 
             # 4.2 Swan index permutation for this position / symmetry
-            perm = compute_swan_permutation(x, square_map)
+            move_perm = compute_swan_permutation(x, square_map)
+            push_perm = compute_swan_permutation(x, square_map, enemy=True)
 
             # 4.3 Map the policy
             pi_sym = np.zeros_like(pi)
@@ -512,7 +524,7 @@ def apply_symmetry_augmentation(X, Pi, Z):
                 new_mask = 0
                 for bit in range(MAX_SWANS):
                     if mask & (1 << bit):
-                        new_mask |= (1 << int(perm[bit]))
+                        new_mask |= (1 << int(move_perm[bit]))
 
                 new_subset_idx = MASK_TO_INDEX[new_mask]
 
@@ -527,17 +539,21 @@ def apply_symmetry_augmentation(X, Pi, Z):
                     )
                     pi_sym[dst_idx] += v
 
-            # --- 4.3.3 Push actions (one swan index + direction) ---
-            for swan_idx in range(MAX_SWANS):
-                new_swan_idx = int(perm[swan_idx])
+            # --- 4.3.3 Push actions (enemy subset + direction) ---
+            for subset_idx, mask in enumerate(SUBSET_MASKS):
+                new_mask = 0
+                for bit in range(MAX_SWANS):
+                    if mask & (1 << bit):
+                        new_mask |= 1 << int(push_perm[bit])
+                new_subset_idx = MASK_TO_INDEX[new_mask]
                 for dir_idx in range(len(dirs)):
-                    src_idx = PUSH_START + swan_idx * len(dirs) + dir_idx
+                    src_idx = PUSH_START + subset_idx * len(dirs) + dir_idx
                     v = pi[src_idx]
                     if v == 0.0:
                         continue
                     new_dir_idx = int(dir_map[dir_idx])
                     dst_idx = (
-                        PUSH_START + new_swan_idx * len(dirs) + new_dir_idx
+                        PUSH_START + new_subset_idx * len(dirs) + new_dir_idx
                     )
                     pi_sym[dst_idx] += v
 
@@ -661,7 +677,7 @@ def train_one_model(
             x, target_pi, target_z = batch
 
             # Use non_blocking transfers with pinned memory on CUDA
-            x = x.to(dev, non_blocking=True)                 # [B,6,10,10]
+            x = x.to(dev, non_blocking=True)                 # [B,8,10,10]
             target_pi = target_pi.to(dev, non_blocking=True) # [B,A]
             target_z = target_z.to(dev, non_blocking=True)   # [B]
 

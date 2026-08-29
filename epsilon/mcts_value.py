@@ -7,8 +7,12 @@ from typing import Dict, List, Optional, Tuple
 import math
 import torch
 
-from linithenv import LinithEnv, GameState
-from epsilon.legacy.model import LinithNet  # we will only use its value output
+try:
+    from .linithenv import LinithEnv, GameState
+    from .legacy.model import LinithNet
+except ImportError:
+    from linithenv import LinithEnv, GameState
+    from legacy.model import LinithNet
 
 
 Action = Tuple  # same convention as in linith_env
@@ -45,6 +49,7 @@ def clone_env(env: LinithEnv) -> LinithEnv:
         done=s.done,
         winner=s.winner,
         move_count=s.move_count,
+        max_moves=s.max_moves,
     )
     return new_env
 
@@ -98,7 +103,11 @@ class ValueMCTS:
                     q_sa = 0.0
                 else:
                     N_sa = child.visit_count
-                    q_sa = child.q_value
+                    q_sa = (
+                        child.q_value
+                        if child.to_move == node.to_move
+                        else -child.q_value
+                    )
 
                 N_s = max(1, node.visit_count)
                 u = self.c_uct * math.sqrt(math.log(N_s + 1) / (N_sa + 1))
@@ -125,7 +134,7 @@ class ValueMCTS:
         if env.state.done:  # type: ignore[union-attr]
             # Terminal: value from the perspective of the player to move at *this* node
             winner = env.state.winner  # type: ignore[union-attr]
-            if winner is None:
+            if winner is None or winner == 0:
                 value = 0.0
             else:
                 # if winner == node.to_move → +1, else -1
@@ -158,11 +167,10 @@ class ValueMCTS:
     def _backpropagate(self, path: List[Node], value: float) -> None:
         """
         Backup value along the path. path[0] is root, path[-1] is leaf node.
-        Value is from the perspective of the leaf node's to_move; we flip sign
-        at each step when going up.
+        Value is from the leaf player's perspective. A Linith action need not
+        pass the turn, so signs are based on each node's actual player.
         """
-        v = value
+        leaf_player = path[-1].to_move
         for node in reversed(path):
             node.visit_count += 1
-            node.value_sum += v
-            v = -v  # flip for the other side
+            node.value_sum += value if node.to_move == leaf_player else -value

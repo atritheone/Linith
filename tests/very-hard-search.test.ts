@@ -22,6 +22,7 @@ import {
   chooseVeryHardAction,
   createVeryHardSearchEngine,
   explainVeryHardPosition,
+  VERY_HARD_STYLE_TIE_BREAK_LIMIT,
   searchVeryHard,
   type VeryHardSearchOptions
 } from "../src/renderer/game/veryHard";
@@ -309,13 +310,14 @@ test("a reusable engine avoids returning to a previously searched game state", (
   );
 });
 
-test("legacy personalities are bounded evaluator tie-breaks", () => {
+test("personalities are bounded evaluator tie-breaks with a zero-bias Doctrinal baseline", () => {
   const state = developmentState();
   const doctrinal = explainVeryHardPosition(state, 1, "doctrinal");
+  assert.equal(doctrinal.style, 0);
   for (const style of ["constrictor", "rupture", "blizzard", "librarian", "swarm", "fortress"]) {
     const styled = explainVeryHardPosition(state, 1, style);
     assert.equal(styled.total - doctrinal.total, styled.style - doctrinal.style);
-    assert.ok(Math.abs(styled.total - doctrinal.total) <= 300);
+    assert.ok(Math.abs(styled.total - doctrinal.total) <= VERY_HARD_STYLE_TIE_BREAK_LIMIT);
   }
 });
 

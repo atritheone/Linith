@@ -14,7 +14,7 @@ def play_one_game(env: LinithEnv, max_steps: int = 500):
     Plays one full random game of Linith in the RL environment.
 
     Returns:
-      states:  list of np.ndarray, each (6, 10, 10)
+      states:  list of np.ndarray, each (8, 10, 10)
       players: list of int (SUN or MOON) corresponding to each state
       winner:  SUN / MOON / None
     """
@@ -55,7 +55,7 @@ def generate_self_play_dataset(
     Generate a dataset from random self-play.
 
     Returns:
-      X: np.ndarray of shape (N, 6, 10, 10) – states
+      X: np.ndarray of shape (N, 8, 10, 10) – states
       y: np.ndarray of shape (N,) – value targets in [-1, 0, 1],
          from the perspective of the player to move in each state.
     """
@@ -89,7 +89,7 @@ def generate_self_play_dataset(
         winner_label = 'None' if winner is None else ('Sun' if winner == SUN else 'Moon')
         print(f"[self-play] game {g+1}/{num_games} finished, winner={winner_label}")
 
-    X = np.stack(all_states, axis=0).astype(np.float32)      # (N, 6, 10, 10)
+    X = np.stack(all_states, axis=0).astype(np.float32)      # (N, 8, 10, 10)
     y = np.array(all_values, dtype=np.float32)               # (N,)
     return X, y
 

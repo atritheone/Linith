@@ -1,4 +1,4 @@
-import { AI_STYLES, type AiStyleWeights } from "../aiStyles";
+import { aiPersonality, type AiPersonalityProfile } from "../aiStyles";
 import {
   BOARD_SIZE,
   DIRECTIONS,
@@ -18,7 +18,7 @@ import {
 } from "../encirclement";
 
 export const VERY_HARD_MATE_SCORE = 1_000_000_000;
-export const VERY_HARD_STYLE_TIE_BREAK_LIMIT = 300;
+export const VERY_HARD_STYLE_TIE_BREAK_LIMIT = 900;
 
 /**
  * Explicit, integer weights make the hand-tuned evaluator reproducible and
@@ -215,8 +215,12 @@ function localMobility(board: Board, swans: readonly Coordinate[]): number {
   return score;
 }
 
-function profile(style: string): AiStyleWeights {
-  return AI_STYLES[style] ?? AI_STYLES.doctrinal;
+function profile(style: string): AiPersonalityProfile {
+  return aiPersonality(style);
+}
+
+function bounded(value: number, limit: number): number {
+  return Math.max(-limit, Math.min(limit, value));
 }
 
 export function explainVeryHardPosition(
@@ -230,6 +234,7 @@ export function explainVeryHardPosition(
   const myGroups = activeGroups(state.board, perspective);
   const theirGroups = activeGroups(state.board, opponent);
   const personality = profile(style);
+  const traits = personality.traits;
   const weights = VERY_HARD_EVALUATION_WEIGHTS;
 
   const myFrozen = frozenCount(state.board, perspective);
@@ -251,7 +256,8 @@ export function explainVeryHardPosition(
   const totalTheirs = countTotalSwans(state.board, opponent);
   const development = (totalMine - totalTheirs) * weights.development;
   const centre = (centreControl(mine) - centreControl(theirs)) * weights.centre;
-  const mobility = (localMobility(state.board, mine) - localMobility(state.board, theirs)) * weights.mobility;
+  const mobilityDifference = localMobility(state.board, mine) - localMobility(state.board, theirs);
+  const mobility = mobilityDifference * weights.mobility;
   const deployedPhase = Math.min(1, (totalMine + totalTheirs) / 12);
   const phase = Math.round(
     (1 - deployedPhase) * (development + centre) * 0.2
@@ -261,15 +267,28 @@ export function explainVeryHardPosition(
     * Math.max(1, state.movesLeft)
     * weights.tempoAction;
 
-  // Personalities are deliberately a tie-break, never a second evaluator.
-  // Every term below is antisymmetric between players and the final delta is
-  // tightly bounded, so a style cannot sacrifice tactical strength.
-  const styleRaw =
-    ((personality.wFreeze ?? 500) - 500) * (theirFrozen - myFrozen) * 0.08
-    + ((personality.wMyLib ?? 5) - 5) * (myLiberties - theirLiberties) * 3
-    + ((personality.wOpLib ?? -9) + 9) * (myLiberties - theirLiberties) * 2
-    + (personality.wRing ?? 0) * Math.sign(pressure) * Math.min(80, Math.abs(pressure) / 100)
-    + ((personality.wSpace ?? 0) - 1) * Math.sign(territory) * Math.min(60, Math.abs(territory) / 20);
+  // Personalities are deliberately a bounded tie-break, never a second
+  // evaluator. Every feature is a mine-minus-theirs difference, so the style
+  // remains antisymmetric between players. Doctrinal has no traits and is
+  // therefore an exact zero-bias baseline.
+  const frozenBalance = theirFrozen - myFrozen;
+  const libertyBalance = myLiberties - theirLiberties;
+  const pressureSignal = bounded(pressure / 100, 80);
+  const territorySignal = bounded(territory / 20, 60);
+  const urgencySignal = bounded(urgency / 500, 60);
+  const fragmentationBalance = theirGroups.length - myGroups.length;
+  const developmentBalance = totalMine - totalTheirs;
+  const styleRaw = 3 * (
+    (traits.freezeUrgency ?? 0) * frozenBalance * 35
+    + (traits.selfPreservation ?? 0) * urgencySignal
+    + (traits.libertyBalance ?? 0) * libertyBalance * 4
+    + (traits.containment ?? 0) * pressureSignal
+    + (traits.territory ?? 0) * territorySignal
+    + (traits.fragmentation ?? 0) * fragmentationBalance * 25
+    + (traits.development ?? 0) * developmentBalance * 20
+    + (traits.structure ?? 0) * contactDifference * 3
+    + (traits.mobility ?? 0) * mobilityDifference * 1.5
+  );
   const styleTieBreak = Math.round(Math.max(
     -VERY_HARD_STYLE_TIE_BREAK_LIMIT,
     Math.min(VERY_HARD_STYLE_TIE_BREAK_LIMIT, styleRaw)

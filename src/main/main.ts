@@ -16,7 +16,7 @@ function createMainWindow(): void {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: "#0f0f12",
+    backgroundColor: "#080a0d",
     fullscreenable: true,
     autoHideMenuBar: true,
     show: false,

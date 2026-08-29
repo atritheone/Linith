@@ -649,6 +649,68 @@ bool both_at_six_board(const Board &b) {
             count_total_swans_int(MOON,b)>=6);
 }
 
+bool has_friendly_pusher(const Board &board, int player, Coord enemy_swan) {
+    for (auto [dr, dc] : DIRS8) {
+        int r = enemy_swan.first + dr;
+        int c = enemy_swan.second + dc;
+        if (in_bounds(r, c) && is_active_swan(player, get_cell(board, r, c)))
+            return true;
+    }
+    return false;
+}
+
+Board simulate_push_subset_board(
+    const Board &board,
+    int player,
+    const std::vector<Coord> &subset,
+    Coord direction,
+    bool &ok)
+{
+    ok = false;
+    if (subset.empty() || std::find(DIRS8.begin(), DIRS8.end(), direction) == DIRS8.end())
+        return board;
+    std::set<Coord> unique(subset.begin(), subset.end());
+    if (unique.size() != subset.size()) return board;
+    int enemy = (player == SUN) ? MOON : SUN;
+    for (const Coord &coord : subset) {
+        if (!in_bounds(coord.first, coord.second) ||
+            !is_active_swan(enemy, get_cell(board, coord.first, coord.second)) ||
+            !has_friendly_pusher(board, player, coord))
+            return board;
+    }
+    return simulate_group_move(
+        board, subset, direction, enemy, ok, /*apply_forbidden=*/false
+    );
+}
+
+std::vector<std::pair<std::vector<Coord>, Coord>> legal_push_moves_board(
+    const Board &board,
+    int player)
+{
+    int enemy = (player == SUN) ? MOON : SUN;
+    std::vector<Coord> candidates;
+    for (int r = 0; r < BOARD_SIZE; ++r)
+        for (int c = 0; c < BOARD_SIZE; ++c) {
+            Coord coord(r, c);
+            if (is_active_swan(enemy, get_cell(board, r, c)) &&
+                has_friendly_pusher(board, player, coord))
+                candidates.push_back(coord);
+        }
+
+    std::vector<std::pair<std::vector<Coord>, Coord>> result;
+    for (int mask = 1; mask < (1 << static_cast<int>(candidates.size())); ++mask) {
+        std::vector<Coord> subset;
+        for (int i = 0; i < static_cast<int>(candidates.size()); ++i)
+            if (mask & (1 << i)) subset.push_back(candidates[i]);
+        for (Coord direction : DIRS8) {
+            bool ok = false;
+            simulate_push_subset_board(board, player, subset, direction, ok);
+            if (ok) result.emplace_back(subset, direction);
+        }
+    }
+    return result;
+}
+
 bool has_any_legal_action_board(const Board &board, int player) {
     // Any legal Swan placement?
     if (!legal_swan_placements(board, player).empty()) {
@@ -663,6 +725,10 @@ bool has_any_legal_action_board(const Board &board, int player) {
     // Any legal group move?
     auto gm = legal_group_moves(board, player, /*max_group_size=*/6);
     if (!gm.empty()) {
+        return true;
+    }
+
+    if (!legal_push_moves_board(board, player).empty()) {
         return true;
     }
 
@@ -1012,7 +1078,7 @@ std::vector<std::vector<Coord>> all_swan_subsets(const std::vector<Coord> &coord
 struct MoveAction {
     // type: "stone", "swan", "move", "push"
     std::string type;
-    int r=0, c=0;          // usually origin (for push: my Swan)
+    int r=0, c=0;          // placement square where applicable
     Coord dir{0,0};        // movement direction (for move/push)
     std::vector<Coord> swans;  // for move: our subset; for push: enemy Swan(s)
     double score=0.0;
@@ -1032,14 +1098,9 @@ Board after_board(const Board &board, const MoveAction &a, int current) {
         if (!ok) return board; // caller must check
         return nb2;
     } else if (a.type=="push") {
-        // push: current player's Swan at (r,c) pushes an adjacent enemy Swan
-        // stored in swans[0], in direction a.dir, using enemy as the mover.
         if (a.swans.empty()) return board;
-        Coord enemy = a.swans[0];
         bool ok=false;
-        int enemy_player = (current==SUN)?MOON:SUN;
-        std::vector<Coord> subset{enemy};
-        Board nb2 = simulate_group_move(board, subset, a.dir, enemy_player, ok);
+        Board nb2 = simulate_push_subset_board(board, current, a.swans, a.dir, ok);
         if (!ok) return board;
         return nb2;
     }
@@ -1101,30 +1162,17 @@ std::vector<MoveAction> generate_greedy_candidates(
         }
     }
 
-    // NEW: push moves (greedy model sees pushes too)
-    int opp = (player==SUN)?MOON:SUN;
-    for (auto [r,c] : my_swans) {
-        for (auto dir : DIRS8) {
-            int nr = r + dir.first;
-            int nc = c + dir.second;
-            if (!in_bounds(nr,nc)) continue;
-            int v = get_cell(b,nr,nc);
-            if (!is_active_swan(opp,v)) continue;  // only active enemy Swans
-
-            bool ok=false;
-            std::vector<Coord> subset{Coord(nr,nc)};
-            Board b2 = simulate_group_move(b, subset, dir, opp, ok, /*apply_forbidden=*/false);
-            if (!ok) continue;
-
-            double sc = evaluate_styled(b,b2,player,style_name);
-            MoveAction a;
-            a.type="push";
-            a.r = r; a.c = c;        // my Swan
-            a.dir = dir;             // dir from me to enemy / push direction
-            a.swans = {Coord(nr,nc)}; // enemy Swan being pushed
-            a.score = sc;
-            out.push_back(std::move(a));
-        }
+    // Pushes may move any eligible enemy subset in any common direction.
+    for (const auto &[subset, dir] : legal_push_moves_board(b, player)) {
+        bool ok=false;
+        Board b2 = simulate_push_subset_board(b, player, subset, dir, ok);
+        if (!ok) continue;
+        MoveAction a;
+        a.type="push";
+        a.dir=dir;
+        a.swans=subset;
+        a.score=evaluate_styled(b,b2,player,style_name);
+        out.push_back(std::move(a));
     }
 
     std::sort(out.begin(),out.end(),
@@ -1191,7 +1239,7 @@ MoveAction linith_ai(
 
 
     if (difficulty=="hard" || difficulty=="very_hard") {
-        CAP = {99,99,999,999,0,true};
+        CAP = {99,99,999,2048,0,true};
     } else if (difficulty=="hard_train") {
         CAP = {2,5,24,40,0,true};
     } else if (difficulty=="medium") {
@@ -1231,13 +1279,12 @@ MoveAction linith_ai(
         cands.push_back(std::move(a));
         stats.move_candidates++;
     };
-    auto push_push = [&](int mr,int mc,int er,int ec, Coord dir, double score){
+    auto push_push = [&](const std::vector<Coord> &subset, Coord dir, double score){
         if (stats.move_candidates>=CAP.BEAM) return;
         MoveAction a;
         a.type = "push";
-        a.r = mr; a.c = mc;          // my Swan
-        a.dir = dir;                 // push direction
-        a.swans = {Coord(er,ec)};    // enemy Swan
+        a.dir = dir;
+        a.swans = subset;
         a.score = score;
         cands.push_back(std::move(a));
         stats.move_candidates++;
@@ -1347,39 +1394,18 @@ MoveAction linith_ai(
         }
     }
 
-    // push moves: my Swan pushes adjacent enemy active Swan
+    // push moves: any eligible enemy subset in any common direction
     if (stats.move_candidates < CAP.BEAM) {
-        auto my_swans = active_swans_of(board, me);
-        int enemy = opp;
-        for (auto [r,c] : my_swans) {
-            if (!in_locality(r,c)) continue;
-            for (auto dir : DIRS8) {
-                if (stats.move_candidates >= CAP.BEAM) break;
-
-                int nr = r + dir.first;
-                int nc = c + dir.second;
-                if (!in_bounds(nr,nc)) continue;
-
-                int v = get_cell(board,nr,nc);
-                if (!is_active_swan(enemy, v)) continue;
-
-                bool ok = false;
-                std::vector<Coord> subset{ Coord(nr,nc) };
-                Board b2 = simulate_group_move(board, subset, dir, enemy, ok);
-                if (!ok) continue;
-
-                double sc = evaluate_styled(board, b2, me, style_name);
-                MoveAction a;
-                a.type  = "push";
-                a.r     = r;        // my Swan doing the push
-                a.c     = c;
-                a.dir   = dir;
-                a.swans = { Coord(nr, nc) };  // enemy Swan being pushed
-                a.score = sc;
-
-                cands.push_back(std::move(a));
-                stats.move_candidates++;
-            }
+        for (const auto &[subset, dir] : legal_push_moves_board(board, me)) {
+            if (stats.move_candidates >= CAP.BEAM) break;
+            bool local = std::any_of(subset.begin(), subset.end(), [&](Coord p) {
+                return in_locality(p.first, p.second);
+            });
+            if (!local) continue;
+            bool ok = false;
+            Board b2 = simulate_push_subset_board(board, me, subset, dir, ok);
+            if (!ok) continue;
+            push_push(subset, dir, evaluate_styled(board, b2, me, style_name));
         }
     }
 
@@ -1568,9 +1594,10 @@ struct GameState {
     bool done;
     int winner; // SUN / MOON / 0 (None)
     int move_count;
+    int max_moves;
 
     py::array_t<float> to_tensor() const {
-        auto result = py::array_t<float>({6, BOARD_SIZE, BOARD_SIZE});
+        auto result = py::array_t<float>({8, BOARD_SIZE, BOARD_SIZE});
         auto r = result.mutable_unchecked<3>();
 
         encode_state_from_gamestate(*this, r);
@@ -1592,6 +1619,11 @@ void encode_state_from_gamestate(const GameState& st, R& r) {
             r(4, rr, cc) = (v == STONE       ? 1.0f : 0.0f);
             // channel 5: current player; fill below
             r(5, rr, cc) = 0.0f;
+            r(6, rr, cc) = static_cast<float>(st.actions_left);
+            r(7, rr, cc) = std::min(
+                1.0f,
+                static_cast<float>(st.move_count) / std::max(1, st.max_moves)
+            );
         }
     }
 
@@ -1656,6 +1688,7 @@ public:
         state_.done          = false;
         state_.winner        = 0;
         state_.move_count    = 0;
+        state_.max_moves     = max_moves_;
 
         return encode_state();
     }
@@ -1665,7 +1698,7 @@ public:
         // ("place_swan",  r, c)
         // ("place_stone", r, c)
         // ("move_group",  subset, (dr,dc))
-        // ("push",        (my_r, my_c), (enemy_r, enemy_c))
+        // ("push",        enemy_subset, (dr,dc))
         if (state_.done) {
             throw std::runtime_error("Game already finished; call reset().");
         }
@@ -1684,7 +1717,7 @@ public:
             auto subset_obj = action_obj.attr("__getitem__")(1);
             auto dir_obj    = action_obj.attr("__getitem__")(2);
             std::vector<Coord> subset;
-            int subset_len = py::len(subset_obj);
+            int subset_len = static_cast<int>(py::len(subset_obj));
             subset.reserve(subset_len);
             for (int i=0;i<subset_len;++i) {
                 auto t = subset_obj.attr("__getitem__")(i);
@@ -1696,13 +1729,23 @@ public:
             int dc = py::cast<int>(dir_obj.attr("__getitem__")(1));
             move_group(subset,Coord(dr,dc));
         } else if (kind=="push") {
-            auto my_obj    = action_obj.attr("__getitem__")(1);
-            auto enemy_obj = action_obj.attr("__getitem__")(2);
-            int mr = py::cast<int>(my_obj.attr("__getitem__")(0));
-            int mc = py::cast<int>(my_obj.attr("__getitem__")(1));
-            int er = py::cast<int>(enemy_obj.attr("__getitem__")(0));
-            int ec = py::cast<int>(enemy_obj.attr("__getitem__")(1));
-            push(Coord(mr,mc), Coord(er,ec));
+            auto subset_obj = action_obj.attr("__getitem__")(1);
+            auto dir_obj = action_obj.attr("__getitem__")(2);
+            std::vector<Coord> subset;
+            for (int i=0; i<static_cast<int>(py::len(subset_obj)); ++i) {
+                auto t = subset_obj.attr("__getitem__")(i);
+                subset.emplace_back(
+                    py::cast<int>(t.attr("__getitem__")(0)),
+                    py::cast<int>(t.attr("__getitem__")(1))
+                );
+            }
+            push(
+                subset,
+                Coord(
+                    py::cast<int>(dir_obj.attr("__getitem__")(0)),
+                    py::cast<int>(dir_obj.attr("__getitem__")(1))
+                )
+            );
         } else {
             throw std::runtime_error("Unknown action kind in step_py");
         }
@@ -1782,33 +1825,12 @@ public:
             ));
         }
 
-        // push moves: current player's Swan pushes adjacent enemy Swan
-        int my_target    = (player==SUN)?SWAN_SUN:SWAN_MOON;
-        int enemy_target = (player==SUN)?SWAN_MOON:SWAN_SUN;
-        int enemy_player = (player==SUN)?MOON:SUN;
-
-        for (int r=0;r<BOARD_SIZE;++r) {
-            for (int c=0;c<BOARD_SIZE;++c) {
-                if (get_cell(board,r,c) != my_target) continue;
-
-                for (auto dir : DIRS8) {
-                    int nr = r + dir.first;
-                    int nc = c + dir.second;
-                    if (!in_bounds(nr,nc)) continue;
-                    if (get_cell(board,nr,nc) != enemy_target) continue;
-
-                    bool ok=false;
-                    std::vector<Coord> subset(1, Coord(nr,nc));
-                    Board nb = simulate_group_move(board, subset, dir, enemy_player, ok, /*apply_forbidden=*/false);
-                    if (!ok) continue;
-
-                    acts.push_back(py::make_tuple(
-                        "push",
-                        py::make_tuple(r,c),
-                        py::make_tuple(nr,nc)
-                    ));
-                }
-            }
+        for (const auto &[subset, dir] : legal_push_moves_board(board, player)) {
+            py::list s_list;
+            for (auto [r,c] : subset) s_list.append(py::make_tuple(r,c));
+            acts.push_back(py::make_tuple(
+                "push", s_list, py::make_tuple(dir.first, dir.second)
+            ));
         }
 
         return acts;
@@ -1827,10 +1849,17 @@ private:
 
     void place_swan(int r,int c) {
         int player = state_.current_player;
+        if (!in_bounds(r,c) || count_total_swans_int(player,state_.board)>=6)
+            throw std::runtime_error("Illegal Swan placement.");
+        auto legal = legal_swan_placements(state_.board, player);
+        if (std::find(legal.begin(), legal.end(), Coord(r,c)) == legal.end())
+            throw std::runtime_error("Illegal Swan placement.");
         set_cell(state_.board,r,c,(player==SUN)?SWAN_SUN:SWAN_MOON);
     }
 
     void place_stone(int r,int c) {
+        if (!in_bounds(r,c) || get_cell(state_.board,r,c)!=EMPTY)
+            throw std::runtime_error("A Stone can only be placed on an empty tile.");
         set_cell(state_.board,r,c,STONE);
     }
 
@@ -1842,18 +1871,11 @@ private:
         state_.board = nb;
     }
 
-    void push(const Coord &my_pos, const Coord &enemy_pos) {
-        int mr = my_pos.first;
-        int mc = my_pos.second;
-        int er = enemy_pos.first;
-        int ec = enemy_pos.second;
-        int dr = er - mr;
-        int dc = ec - mc;
-
-        int enemy_player = (state_.current_player==SUN)?MOON:SUN;
+    void push(const std::vector<Coord> &subset, Coord direction) {
         bool ok=false;
-        std::vector<Coord> subset(1, enemy_pos);
-        Board nb = simulate_group_move(state_.board, subset, Coord(dr,dc), enemy_player, ok, /*apply_forbidden=*/false);
+        Board nb = simulate_push_subset_board(
+            state_.board, state_.current_player, subset, direction, ok
+        );
         if (!ok)
             throw std::runtime_error("Illegal push move passed to push.");
         state_.board = nb;
@@ -1866,32 +1888,11 @@ private:
         // 2: moon active
         // 3: moon frozen
         // 4: stone
-        // 5: current_player (1 for SUN, 0 for MOON)
-        std::vector<float> data(6*BOARD_SIZE*BOARD_SIZE,0.0f);
-        auto put = [&](int ch,int r,int c,float v){
-            data[(ch*BOARD_SIZE + r)*BOARD_SIZE + c] = v;
-        };
-        for (int r=0;r<BOARD_SIZE;++r) {
-            for (int c=0;c<BOARD_SIZE;++c) {
-                int v=get_cell(state_.board,r,c);
-                if (v==SWAN_SUN) put(0,r,c,1.0f);
-                else if (v==FROZEN_SUN) put(1,r,c,1.0f);
-                else if (v==SWAN_MOON) put(2,r,c,1.0f);
-                else if (v==FROZEN_MOON) put(3,r,c,1.0f);
-                else if (v==STONE) put(4,r,c,1.0f);
-            }
-        }
-        if (state_.current_player==SUN) {
-            for (int r=0;r<BOARD_SIZE;++r)
-                for (int c=0;c<BOARD_SIZE;++c)
-                    put(5,r,c,1.0f);
-        } else {
-            for (int r=0;r<BOARD_SIZE;++r)
-                for (int c=0;c<BOARD_SIZE;++c)
-                    put(5,r,c,0.0f);
-        }
-
-        return py::array_t<float>({6,BOARD_SIZE,BOARD_SIZE}, data.data());
+        // 6: actions_left; 7: move_count/max_moves
+        auto result = py::array_t<float>({8,BOARD_SIZE,BOARD_SIZE});
+        auto r = result.mutable_unchecked<3>();
+        encode_state_from_gamestate(state_, r);
+        return result;
     }
 
     void check_terminal_conditions(const FreezeResult &fr) {
@@ -1945,20 +1946,19 @@ private:
 //  0–99   : place_swan
 //  100–199: place_stone
 //  200–703: move_group (1..6 swans, 8 dirs)
-//  704–751: push       (up to 6 swans, 8 dirs)
+//  704–1207: push      (enemy subset, 8 dirs)
 // ============================================================
 
-constexpr int ACTION_SIZE = 752;
+constexpr int ACTION_SIZE = 1208;
 constexpr int MAX_SWANS   = 6;
 
 inline int square_index(int r,int c) {
     return r*BOARD_SIZE + c;
 }
 
-std::vector<Coord> active_swans_for_current_player(const LinithEnv &env) {
+std::vector<Coord> active_swans_for_player(const LinithEnv &env, int player) {
     const GameState &s = env.state();
     const Board &board = s.board;
-    int player = s.current_player;
     int target = (player==SUN)?SWAN_SUN:SWAN_MOON;
     std::vector<Coord> coords;
     for (int r=0;r<BOARD_SIZE;++r)
@@ -1969,6 +1969,10 @@ std::vector<Coord> active_swans_for_current_player(const LinithEnv &env) {
     if ((int)coords.size()>MAX_SWANS)
         coords.resize(MAX_SWANS);
     return coords;
+}
+
+std::vector<Coord> active_swans_for_current_player(const LinithEnv &env) {
+    return active_swans_for_player(env, env.state().current_player);
 }
 
 int subset_mask_from_coords(const std::vector<Coord> &subset,
@@ -2015,6 +2019,8 @@ int encode_action_cpp(const LinithEnv &env, const py::object &action_obj) {
     if (kind=="place_swan") {
         int r = py::cast<int>(action_obj.attr("__getitem__")(1));
         int c = py::cast<int>(action_obj.attr("__getitem__")(2));
+        if (!in_bounds(r,c))
+            throw std::runtime_error("place_swan outside board");
         int idx = square_index(r,c);
         if (!(0<=idx && idx<100))
             throw std::runtime_error("place_swan outside board");
@@ -2023,6 +2029,8 @@ int encode_action_cpp(const LinithEnv &env, const py::object &action_obj) {
     if (kind=="place_stone") {
         int r = py::cast<int>(action_obj.attr("__getitem__")(1));
         int c = py::cast<int>(action_obj.attr("__getitem__")(2));
+        if (!in_bounds(r,c))
+            throw std::runtime_error("place_stone outside board");
         int rc = square_index(r,c);
         if (!(0<=rc && rc<100))
             throw std::runtime_error("place_stone outside board");
@@ -2032,7 +2040,7 @@ int encode_action_cpp(const LinithEnv &env, const py::object &action_obj) {
         auto subset_obj = action_obj.attr("__getitem__")(1);
         auto dir_obj    = action_obj.attr("__getitem__")(2);
 
-        int subset_len = py::len(subset_obj);
+        int subset_len = static_cast<int>(py::len(subset_obj));
         if (!(1<=subset_len && subset_len<=MAX_SWANS))
             throw std::runtime_error("subset size out of 1..MAX_SWANS");
         std::vector<Coord> subset;
@@ -2066,27 +2074,26 @@ int encode_action_cpp(const LinithEnv &env, const py::object &action_obj) {
     }
 
     if (kind=="push") {
-        auto my_obj    = action_obj.attr("__getitem__")(1);
-        auto enemy_obj = action_obj.attr("__getitem__")(2);
-
-        int mr = py::cast<int>(my_obj.attr("__getitem__")(0));
-        int mc = py::cast<int>(my_obj.attr("__getitem__")(1));
-        int er = py::cast<int>(enemy_obj.attr("__getitem__")(0));
-        int ec = py::cast<int>(enemy_obj.attr("__getitem__")(1));
-
-        Coord my_coord(mr,mc);
-        auto swans = active_swans_for_current_player(env);
-        int swan_index = -1;
-        for (int i=0;i<(int)swans.size();++i) {
-            if (swans[i]==my_coord) { swan_index = i; break; }
+        auto subset_obj = action_obj.attr("__getitem__")(1);
+        auto dir_obj = action_obj.attr("__getitem__")(2);
+        int subset_len = static_cast<int>(py::len(subset_obj));
+        if (!(1 <= subset_len && subset_len <= MAX_SWANS))
+            throw std::runtime_error("push subset size out of range");
+        std::vector<Coord> subset;
+        for (int i=0; i<subset_len; ++i) {
+            auto t = subset_obj.attr("__getitem__")(i);
+            subset.emplace_back(
+                py::cast<int>(t.attr("__getitem__")(0)),
+                py::cast<int>(t.attr("__getitem__")(1))
+            );
         }
-        if (swan_index<0)
-            throw std::runtime_error("push: my Swan not found among active swans");
-        if (swan_index>=MAX_SWANS)
-            throw std::runtime_error("push: Swan index exceeds MAX_SWANS");
+        int enemy = env.state().current_player == SUN ? MOON : SUN;
+        auto swans = active_swans_for_player(env, enemy);
+        int mask = subset_mask_from_coords(subset, swans);
+        int subset_index = MASK_TO_INDEX.at(mask);
 
-        int dr = er - mr;
-        int dc = ec - mc;
+        int dr = py::cast<int>(dir_obj.attr("__getitem__")(0));
+        int dc = py::cast<int>(dir_obj.attr("__getitem__")(1));
         int dir_index = -1;
         for (int i=0;i<8;++i) {
             if (DIRS8[i].first==dr && DIRS8[i].second==dc) {
@@ -2097,8 +2104,7 @@ int encode_action_cpp(const LinithEnv &env, const py::object &action_obj) {
         if (dir_index<0)
             throw std::runtime_error("push: direction not in DIRS8");
 
-        int push_start = 704; // after placements + group moves
-        return push_start + swan_index*8 + dir_index;
+        return 704 + subset_index*8 + dir_index;
     }
 
     throw std::runtime_error("Unknown action kind in encode_action_cpp");
@@ -2165,7 +2171,7 @@ double pv_terminal_value_cpp(const LinithEnv& env, int root_player) {
 
 // eval_fn(env) must return (policy_vector, value) from Python:
 // policy_vector: np.ndarray [ACTION_SIZE], float32
-// value: scalar float (root_player perspective)
+// value: scalar float from the current player-to-move's perspective
 std::pair<std::vector<double>, double>
 pv_evaluate_cpp(LinithEnv& env, const py::function& eval_fn) {
     py::tuple out = eval_fn(env);
@@ -2209,6 +2215,8 @@ void pv_expand_cpp(
     const std::vector<py::object>& legal_actions,
     const std::vector<double>& policy_vector)
 {
+    if (!node->children.empty()) return;
+    node->player = env.state().current_player;
     struct Scored {
         double p;
         py::object action;
@@ -2280,7 +2288,7 @@ void pv_expand_cpp(
 
 // SELECT: traverse tree from root until leaf using UCB, simulating in a cloned env
 std::pair<PVNodeCpp*, LinithEnv>
-pv_select_cpp(LinithEnv& root_env, PVNodeCpp* root, double c_puct) {
+pv_select_cpp(LinithEnv& root_env, PVNodeCpp* root, double c_puct, int root_player) {
     PVNodeCpp* node = root;
     LinithEnv sim_env = root_env.clone();
 
@@ -2297,7 +2305,8 @@ pv_select_cpp(LinithEnv& root_env, PVNodeCpp* root, double c_puct) {
         for (int i = 0; i < static_cast<int>(node->children.size()); ++i) {
             auto& child = *node->children[i];
             double U = c_puct * child.P * std::sqrt(total_N) / (1.0 + child.N);
-            double score = child.Q + U;
+            double exploitation = (node->player == root_player) ? child.Q : -child.Q;
+            double score = exploitation + U;
             if (score > best_score) {
                 best_score = score;
                 best_index = i;
@@ -2326,14 +2335,12 @@ pv_select_cpp(LinithEnv& root_env, PVNodeCpp* root, double c_puct) {
 
 void pv_backpropagate_cpp(PVNodeCpp* node, double value, int root_player) {
     PVNodeCpp* cur = node;
-    double cur_value = value;
     (void)root_player; // we already pass value in root_player's perspective
 
     while (cur != nullptr) {
         cur->N += 1.0;
-        cur->W += cur_value;
+        cur->W += value;
         cur->Q = cur->W / cur->N;
-        cur_value = -cur_value;   // alternate perspective up the tree
         cur = cur->parent;
     }
 }
@@ -2456,54 +2463,24 @@ py::dict pv_mcts_search_cpp(
         }
     }
 
-    // ----- simulations (batched) -----
-    const int batch_size = 64;  // tune this: 16, 32, 64 depending on GPU
+    // Sequential selection/evaluation guarantees that each simulation observes
+    // the visits produced by the previous one and that a leaf expands once.
+    for (int sim = 1; sim < num_simulations; ++sim) {
+        auto sel = pv_select_cpp(env, &root, c_puct, root_player);
+        PVNodeCpp* leaf = sel.first;
+        LinithEnv sim_env = std::move(sel.second);
 
-    int sim = 1;
-    while (sim < num_simulations) {
-        std::vector<PVNodeCpp*> leaves;
-        std::vector<LinithEnv> envs;
-
-        leaves.reserve(batch_size);
-        envs.reserve(batch_size);
-
-        // 1) selection: gather up to batch_size non-terminal leaves
-        for (; sim < num_simulations && static_cast<int>(leaves.size()) < batch_size; ++sim) {
-            auto sel = pv_select_cpp(env, &root, c_puct);
-            PVNodeCpp* leaf = sel.first;
-            LinithEnv sim_env = std::move(sel.second);
-
-            const GameState& s = sim_env.state();
-            if (s.done) {
-                double v = pv_terminal_value_cpp(sim_env, root_player);
-                pv_backpropagate_cpp(leaf, v, root_player);
-            } else {
-                leaves.push_back(leaf);
-                envs.push_back(std::move(sim_env));
-            }
-        }
-
-        // nothing to evaluate this round
-        if (envs.empty()) {
-            continue;
-        }
-
-        // 2) evaluation: single batched call into Python
-        auto batch_eval = pv_evaluate_batch_cpp(envs, eval_fn);
-        // batch_eval[i] = (policy, value) for envs[i]
-
-        // 3) expansion + backpropagation
-        for (size_t i = 0; i < leaves.size(); ++i) {
-            PVNodeCpp* leaf = leaves[i];
-            LinithEnv& sim_env = envs[i];
-
-            std::vector<double>& policy = batch_eval[i].first;
-            double v = batch_eval[i].second;
-
+        double v;
+        if (sim_env.state().done) {
+            v = pv_terminal_value_cpp(sim_env, root_player);
+        } else {
+            auto evaluated = pv_evaluate_cpp(sim_env, eval_fn);
             auto legal = sim_env.legal_actions_py();
-            pv_expand_cpp(leaf, sim_env, legal, policy);
-            pv_backpropagate_cpp(leaf, v, root_player);
+            pv_expand_cpp(leaf, sim_env, legal, evaluated.first);
+            v = evaluated.second;
+            if (sim_env.state().current_player != root_player) v = -v;
         }
+        pv_backpropagate_cpp(leaf, v, root_player);
     }
 
     // ----- collect visit counts at root -----
@@ -2540,7 +2517,7 @@ std::string format_dt_ae(const std::chrono::system_clock::time_point &tp) {
 }
 
 struct GameData {
-    std::vector<float> states;   // [T,6,10,10]
+    std::vector<float> states;   // [T,8,10,10]
     std::vector<float> policies; // [T,ACTION_SIZE]
     std::vector<float> values;   // [T]
     int winner;
@@ -2565,13 +2542,9 @@ py::object choose_hard_move_py(LinithEnv &env, const std::string &difficulty) {
         for (auto [r,c] : a.swans) sw.append(py::make_tuple(r,c));
         return py::make_tuple("move_group",sw,py::make_tuple(a.dir.first,a.dir.second));
     } else if (a.type=="push") {
-        int er = a.r + a.dir.first;
-        int ec = a.c + a.dir.second;
-        return py::make_tuple(
-            "push",
-            py::make_tuple(a.r,a.c),
-            py::make_tuple(er,ec)
-        );
+        py::list sw;
+        for (auto [r,c] : a.swans) sw.append(py::make_tuple(r,c));
+        return py::make_tuple("push", sw, py::make_tuple(a.dir.first,a.dir.second));
     }
     // fallback: any legal action
     auto legal = env.legal_actions_py();
@@ -2587,7 +2560,7 @@ GameData play_hard_vs_hard_game_cpp(
 {
     GameData gd;
     LinithEnv env(max_moves);
-    auto obs = env.reset(); // (6,10,10) float32
+    auto obs = env.reset(); // (8,10,10) float32
 
     std::vector<int> players;
 
@@ -2745,7 +2718,7 @@ GameData play_hard_vs_hard_game_cpp(
         // 5) store obs + policy
         auto buf = obs.request();
         float *obs_ptr = static_cast<float*>(buf.ptr);
-        int obs_size = 6 * BOARD_SIZE * BOARD_SIZE;
+        int obs_size = 8 * BOARD_SIZE * BOARD_SIZE;
         gd.states.insert(gd.states.end(), obs_ptr, obs_ptr + obs_size);
         gd.policies.insert(gd.policies.end(), pi.begin(), pi.end());
         players.push_back(s.current_player);
@@ -2862,7 +2835,7 @@ py::tuple generate_teacher_dataset_cpp(
               << std::chrono::duration_cast<std::chrono::seconds>(batch_end-batch_start).count()
               << "s\n\n";
 
-    int state_size = 6*BOARD_SIZE*BOARD_SIZE;
+    int state_size = 8*BOARD_SIZE*BOARD_SIZE;
 
     if ((int)all_states.size()  != T*state_size)
         throw std::runtime_error("states size mismatch");
@@ -2871,7 +2844,7 @@ py::tuple generate_teacher_dataset_cpp(
     if ((int)all_values.size()  != T)
         throw std::runtime_error("values size mismatch");
 
-    py::array_t<float> X({T,6,BOARD_SIZE,BOARD_SIZE});
+    py::array_t<float> X({T,8,BOARD_SIZE,BOARD_SIZE});
     py::array_t<float> Pi({T,ACTION_SIZE});
     py::array_t<float> Z({T});
 
@@ -2894,6 +2867,7 @@ PYBIND11_MODULE(linith_selfplay_cpp, m) {
     // ------------------------------
     m.attr("SUN")  = SUN;
     m.attr("MOON") = MOON;
+    m.attr("ACTION_SIZE") = ACTION_SIZE;
 
     // ------------------------------
     // 1. Bind GameState FIRST
@@ -2902,8 +2876,17 @@ PYBIND11_MODULE(linith_selfplay_cpp, m) {
         .def_readwrite("current_player", &GameState::current_player)
         .def_readwrite("actions_left", &GameState::actions_left)
         .def_readwrite("done", &GameState::done)
-        .def_readwrite("winner", &GameState::winner)
+        .def_property(
+            "winner",
+            [](const GameState &s) -> py::object {
+                return s.winner == 0 ? py::none() : py::cast(s.winner);
+            },
+            [](GameState &s, const py::object &winner) {
+                s.winner = winner.is_none() ? 0 : winner.cast<int>();
+            }
+        )
         .def_readwrite("move_count", &GameState::move_count)
+        .def_readwrite("max_moves", &GameState::max_moves)
         .def("to_tensor", &GameState::to_tensor);
 
     // ------------------------------

@@ -241,7 +241,11 @@ export function createVeryHardWorkerRuntime(
     if (core && tryCachedContinuation(request, state, core)) return;
 
     const book = dependencies.lookupBook(state);
-    if (book && applyAction(state, book.action)) {
+    const bookResult = book ? applyAction(state, book.action) : null;
+    const universalBookMove = request.style === "doctrinal"
+      || !!bookResult?.outcome
+      || (bookResult?.opponentLoss ?? 0) > 0;
+    if (book && bookResult && universalBookMove) {
       postFinalResult(request, state, cloneAction(book.action), "book", undefined, core);
       return;
     }

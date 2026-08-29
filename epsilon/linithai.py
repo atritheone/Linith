@@ -1011,7 +1011,7 @@ def linith_ai(
             "MAX_SUBSET": 99,
             "LOCAL_R": 99,
             "MAX_STONES": 999,
-            "BEAM": 999,
+            "BEAM": 2048,
             "PROBE": 0,
             "MUST_TACTICS": True,
         }
@@ -1344,7 +1344,7 @@ def choose_hard_move(env, difficulty: str = "hard") -> Tuple[str, Any, Any]:
       ("place_swan",  r, c)
       ("place_stone", r, c)
       ("move_group",  subset, dir)
-      ("push",        (my_r, my_c), (enemy_r, enemy_c))
+      ("push",        enemy_subset, dir)
 
     Anti-repeat behaviour:
 
@@ -1476,10 +1476,6 @@ def choose_hard_move(env, difficulty: str = "hard") -> Tuple[str, Any, Any]:
         return anti_repeat(action)
 
     if t == "push":
-        # AI push candidate stores the ENEMY swans in a["swans"] and the push
-        # direction in a["dir"]. We need to convert that into (my_pos, enemy_pos)
-        # as used by LinithEnv / simulate_push_move.
-
         swans = a.get("swans", [])
         if not swans:
             # Shouldn't happen, but fall back safely.
@@ -1491,15 +1487,12 @@ def choose_hard_move(env, difficulty: str = "hard") -> Tuple[str, Any, Any]:
                 return anti_repeat(random.choice(legal))
             raise RuntimeError("Hard AI produced empty push candidate and no legal moves")
 
-        # Take the first enemy Swan in the pushed subset as the contact point.
-        er, ec = swans[0]["r"], swans[0]["c"]
+        subset = tuple((s["r"], s["c"]) for s in swans)
         dir_ = tuple(a["dir"])
 
-        # Use rules-level generator to find the matching legal push and extract my_pos.
-        for my_pos, enemy_pos, d in legal_push_moves(board, current):
-            if enemy_pos == (er, ec) and d == dir_:
-                action = ("push", my_pos, enemy_pos)
-                return anti_repeat(action)
+        action = ("push", subset, dir_)
+        if action in env.legal_actions():
+            return anti_repeat(action)
 
         # If we somehow didn't find an exact match, fall back to any legal push,
         # then to any legal move, rather than crashing.
@@ -1509,7 +1502,7 @@ def choose_hard_move(env, difficulty: str = "hard") -> Tuple[str, Any, Any]:
             return anti_repeat(random.choice(pushes))
         if legal:
             return anti_repeat(random.choice(legal))
-        raise RuntimeError("Hard AI chose a push with no matching legal_push_moves and no legal fallback")
+        raise RuntimeError("Hard AI chose an illegal push and no legal fallback")
 
     # fallback for unknown types
     return anti_repeat(fallback_random_legal())

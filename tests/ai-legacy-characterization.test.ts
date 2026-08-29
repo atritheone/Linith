@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { linithAI } from "../src/renderer/game/ai";
+import { AI_STYLE_IDS } from "../src/renderer/game/aiStyles";
 import type { Board } from "../src/renderer/game/encirclement";
 import { applyActionToBoard } from "../src/renderer/game/rulesEngine";
 
-const STYLES = ["doctrinal", "constrictor", "rupture", "blizzard", "librarian", "swarm", "fortress"] as const;
+const STYLES = AI_STYLE_IDS;
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 
 const fixtures: Array<{ name: string; board: Board; current: 1 | 2 }> = [
@@ -32,7 +33,7 @@ const fixtures: Array<{ name: string; board: Board; current: 1 | 2 }> = [
   }
 ];
 
-test("unaffected Easy, Medium, and Hard decisions retain the captured 0.232 behavior", () => {
+test("Doctrinal retains captured 0.232 decisions while every personality remains legal", () => {
   const originalWindow = globalThis.window;
   const originalRandom = Math.random;
   let style = "doctrinal";
@@ -46,8 +47,10 @@ test("unaffected Easy, Medium, and Hard decisions retain the captured 0.232 beha
         for (const difficulty of DIFFICULTIES) {
           const selected = linithAI(fixture.board, fixture.current, difficulty);
           const actual = normalize(selected);
-          assert.deepEqual(actual, expected(fixture.name, styleName, difficulty),
-            `${fixture.name} / ${styleName} / ${difficulty}`);
+          if (styleName === "doctrinal") {
+            assert.deepEqual(actual, expected(fixture.name, styleName, difficulty),
+              `${fixture.name} / ${styleName} / ${difficulty}`);
+          }
           assert.ok(selected && applyActionToBoard(fixture.board, fixture.current, selected),
             `selected action must remain legal: ${fixture.name} / ${styleName} / ${difficulty}`);
         }
@@ -76,7 +79,7 @@ test("an unknown difficulty is normalized to Medium rather than Easy", () => {
   }
 });
 
-test("corrected Easy, Medium, and Hard decisions are frozen on a Stone-and-freeze position", () => {
+test("corrected Doctrinal decisions stay frozen and every corrected personality action is legal", () => {
   const originalWindow = globalThis.window;
   const originalRandom = Math.random;
   let style = "doctrinal";
@@ -87,8 +90,29 @@ test("corrected Easy, Medium, and Hard decisions are frozen on a Stone-and-freez
       style = styleName;
       for (const difficulty of DIFFICULTIES) {
         const action = linithAI(correctedFixture, 1, difficulty);
-        assert.deepEqual(normalize(action), correctedExpected(styleName, difficulty), `${styleName} / ${difficulty}`);
+        if (styleName === "doctrinal") {
+          assert.deepEqual(normalize(action), correctedExpected(styleName, difficulty), `${styleName} / ${difficulty}`);
+        }
         assert.ok(action && applyActionToBoard(correctedFixture, 1, action));
+      }
+    }
+  } finally {
+    Math.random = originalRandom;
+    globalThis.window = originalWindow;
+  }
+});
+
+test("Swarm keeps its early-development character at Medium and Hard", () => {
+  const originalWindow = globalThis.window;
+  const originalRandom = Math.random;
+  globalThis.window = { linithGetStyle: () => "swarm" } as Window & typeof globalThis;
+  Math.random = () => 0.9;
+  try {
+    for (const fixture of fixtures) {
+      for (const difficulty of ["medium", "hard"] as const) {
+        const action = linithAI(fixture.board, fixture.current, difficulty);
+        assert.equal(action?.type, "swan", `${fixture.name} / ${difficulty}`);
+        assert.ok(action && applyActionToBoard(fixture.board, fixture.current, action));
       }
     }
   } finally {
@@ -132,20 +156,9 @@ const correctedFixture: Board = [
 ];
 
 function correctedExpected(style: string, difficulty: string): unknown {
-  if (style === "doctrinal") {
-    if (difficulty === "easy") return { type: "stone", r: 9, c: 3 };
-    return { type: "move", swans: [{ r: 2, c: 5 }], dir: [-1, 1] };
-  }
-  if (difficulty === "easy") return { type: "stone", r: 1, c: 7 };
-  if (difficulty === "medium") return { type: "stone", r: 2, c: 8 };
-  if (style === "fortress") {
-    return {
-      type: "move",
-      swans: [{ r: 1, c: 3 }, { r: 2, c: 5 }, { r: 3, c: 1 }, { r: 4, c: 4 }],
-      dir: [0, 1]
-    };
-  }
-  return { type: "stone", r: 0, c: 9 };
+  assert.equal(style, "doctrinal");
+  if (difficulty === "easy") return { type: "stone", r: 9, c: 3 };
+  return { type: "move", swans: [{ r: 2, c: 5 }], dir: [-1, 1] };
 }
 
 function expected(fixture: string, style: string, difficulty: string): unknown {

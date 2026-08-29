@@ -5,7 +5,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from linithrules import (
+try:
+    from .linithrules import (
+        BOARD_SIZE, EMPTY, SWAN_SUN, SWAN_MOON, FROZEN_SUN, FROZEN_MOON,
+        STONE, SUN, MOON, count_active_swans, count_total_swans,
+        legal_group_moves, legal_stone_placements, legal_swan_placements,
+        legal_push_moves, simulate_group_move, simulate_push_move,
+        compute_freezes_on, extra_actions_for_player, base_actions_per_turn, DIRS8,
+    )
+except ImportError:
+    from linithrules import (
     BOARD_SIZE,
     EMPTY,
     SWAN_SUN,
@@ -27,7 +36,7 @@ from linithrules import (
     extra_actions_for_player,
     base_actions_per_turn,
     DIRS8,
-)
+    )
 
 
 @dataclass
@@ -38,54 +47,40 @@ class GameState:
     done: bool = False
     winner: Optional[int] = None   # SUN, MOON, or None for draw
     move_count: int = 0
+    max_moves: int = 500
 
     def to_tensor(self):
         """
-        Encode the current board state as a (C, H, W) float32 numpy array
-        with 6 channels:
-
-          0: Sun active swans
-          1: Moon active swans
-          2: stones
-          3: frozen Sun swans
-          4: frozen Moon swans
-          5: current player plane (1 for Sun to move, -1 for Moon to move)
+        Encode the complete decision state as an (8, H, W) float32 array.
         """
-        import numpy as np
+        return encode_game_state(self)
 
-        H = W = BOARD_SIZE
-        planes = np.zeros((6, H, W), dtype=np.float32)
 
-        board = self.board  # 2D array of ints
-
-        for r in range(H):
-            for c in range(W):
-                v = board[r][c]
-                if v == SWAN_SUN:
-                    planes[0, r, c] = 1.0
-                elif v == SWAN_MOON:
-                    planes[1, r, c] = 1.0
-                elif v == STONE:
-                    planes[2, r, c] = 1.0
-                elif v == FROZEN_SUN:
-                    planes[3, r, c] = 1.0
-                elif v == FROZEN_MOON:
-                    planes[4, r, c] = 1.0
-
-        # side to move
-        if self.current_player == SUN:
-            planes[5, :, :] = 1.0
-        elif self.current_player == MOON:
-            planes[5, :, :] = -1.0
-
-        return planes
+def encode_game_state(state: GameState) -> np.ndarray:
+    """Canonical state encoding shared by GameState and LinithEnv."""
+    b = state.board
+    stone = (b == STONE).astype(np.float32)
+    max_moves = max(1, int(state.max_moves))
+    return np.stack(
+        [
+            (b == SWAN_SUN).astype(np.float32),
+            (b == FROZEN_SUN).astype(np.float32),
+            (b == SWAN_MOON).astype(np.float32),
+            (b == FROZEN_MOON).astype(np.float32),
+            stone,
+            np.full_like(stone, 1.0 if state.current_player == SUN else 0.0),
+            np.full_like(stone, float(state.actions_left)),
+            np.full_like(stone, min(1.0, float(state.move_count) / max_moves)),
+        ],
+        axis=0,
+    )
 
 
 # Action encoding:
 #   ("place_swan",  r, c)
 #   ("place_stone", r, c)
 #   ("move_group",  subset, (dr,dc))
-#   ("push",        (my_r, my_c), (enemy_r, enemy_c))
+#   ("push",        enemy_subset, (dr,dc))
 Action = Tuple
 
 
@@ -158,6 +153,7 @@ class LinithEnv:
             done=False,
             winner=None,
             move_count=0,
+            max_moves=self.max_moves,
         )
         return self.encode_state()
 
@@ -248,8 +244,8 @@ class LinithEnv:
             actions.append(("move_group", tuple(subset), direction))
 
         # ----- Push moves -----
-        for my_pos, enemy_pos, _dir in legal_push_moves(board, player):
-            actions.append(("push", my_pos, enemy_pos))
+        for subset, direction in legal_push_moves(board, player):
+            actions.append(("push", tuple(subset), direction))
 
         return actions
 
@@ -266,28 +262,13 @@ class LinithEnv:
           3: moon swan frozen
           4: stone
           5: current_player (1 for SUN to move, 0 for MOON to move)
+          6: actions remaining in the current turn
+          7: move_count / max_moves
         """
         if self.state is None:
             raise RuntimeError("Env not reset.")
 
-        b = self.state.board
-
-        sun_active = (b == SWAN_SUN).astype(np.float32)
-        sun_frozen = (b == FROZEN_SUN).astype(np.float32)
-        moon_active = (b == SWAN_MOON).astype(np.float32)
-        moon_frozen = (b == FROZEN_MOON).astype(np.float32)
-        stone = (b == STONE).astype(np.float32)
-
-        if self.state.current_player == SUN:
-            current_plane = np.ones_like(stone, dtype=np.float32)
-        else:
-            current_plane = np.zeros_like(stone, dtype=np.float32)
-
-        stacked = np.stack(
-            [sun_active, sun_frozen, moon_active, moon_frozen, stone, current_plane],
-            axis=0,
-        )
-        return stacked
+        return encode_game_state(self.state)
 
     def _apply_action(self, action: Action) -> None:
         if self.state is None:
@@ -304,14 +285,20 @@ class LinithEnv:
             _, subset, direction = action
             self._move_group(subset, direction)
         elif kind == "push":
-            _, my_pos, enemy_pos = action
-            self._push(my_pos, enemy_pos)
+            _, subset, direction = action
+            self._push(subset, direction)
         else:
             raise ValueError(f"Unknown action kind: {kind}")
 
     def _place_swan(self, r: int, c: int) -> None:
         assert self.state is not None
         player = self.state.current_player
+        if not (0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE):
+            raise ValueError("Swan placement is outside the board.")
+        if count_total_swans(player, self.state.board) >= 6:
+            raise ValueError("A player cannot have more than six Swans.")
+        if (r, c) not in legal_swan_placements(self.state.board, player):
+            raise ValueError("Illegal Swan placement.")
         if player == SUN:
             self.state.board[r, c] = SWAN_SUN
         else:
@@ -319,6 +306,10 @@ class LinithEnv:
 
     def _place_stone(self, r: int, c: int) -> None:
         assert self.state is not None
+        if not (0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE):
+            raise ValueError("Stone placement is outside the board.")
+        if self.state.board[r, c] != EMPTY:
+            raise ValueError("A Stone can only be placed on an empty tile.")
         self.state.board[r, c] = STONE
 
     def _move_group(
@@ -335,12 +326,12 @@ class LinithEnv:
 
     def _push(
         self,
-        my_pos: Tuple[int, int],
-        enemy_pos: Tuple[int, int],
+        subset: List[Tuple[int, int]],
+        direction: Tuple[int, int],
     ) -> None:
         assert self.state is not None
         player = self.state.current_player
-        nb = simulate_push_move(self.state.board, player, my_pos, enemy_pos)
+        nb = simulate_push_move(self.state.board, player, list(subset), direction)
         if nb is None:
             raise ValueError("Illegal push move passed to _push.")
         self.state.board = nb

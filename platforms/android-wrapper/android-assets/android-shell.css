@@ -37,6 +37,7 @@ body.linith-android .wrap {
   padding: var(--pad) !important;
 }
 
+/* The board remains a single locked, unchanged unit. */
 body.linith-android .boardWrap {
   flex: none;
   width: calc(var(--gut-x) + var(--board)) !important;
@@ -46,12 +47,89 @@ body.linith-android .boardWrap {
 
 body.linith-android .panel {
   width: 100%;
-  padding: 8px 4px calc(16px + env(safe-area-inset-bottom));
+  min-height: 0;
+  padding: 14px 4px calc(12px + env(safe-area-inset-bottom));
+  background: transparent;
+  border-top: 1px solid var(--ui-line);
+  border-left: 0;
+}
+
+body.linith-android .panelHead {
+  min-height: 48px;
+}
+
+body.linith-android .statusRegion {
+  min-height: 60px;
+  padding-block: 12px;
+}
+
+body.linith-android .commandBar {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+
+body.linith-android button,
+body.linith-android select,
+body.linith-android input {
+  min-height: 44px;
+}
+
+body.linith-android .historyCommand {
+  font-size: 17px;
+}
+
+body.linith-android .confirm {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+body.linith-android .confirmButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+body.linith-android .panelBody {
+  min-height: 0;
+  overflow: visible;
+}
+
+body.linith-android .modeChoice {
+  min-height: 58px;
+  padding-inline: 17px;
+}
+
+body.linith-android .modeName {
+  font-size: 12px;
+}
+
+body.linith-android .modeDescription {
+  font-size: 10px;
+}
+
+body.linith-android .historySection {
+  flex: none;
+}
+
+body.linith-android .log {
+  flex: none;
+  height: min(42dvh, 340px);
+  min-height: 220px;
+  font-size: 11px;
+}
+
+body.linith-android .rulesDisclosure summary {
+  min-height: 44px;
   box-sizing: border-box;
 }
 
-body.linith-android .hint {
-  max-height: none !important;
+body.linith-android .rulesPanel {
+  max-height: none;
+  padding-right: 4px;
+}
+
+body.linith-android .rulesPanel h2,
+body.linith-android .rulesPanel p {
+  font-size: 11px;
 }
 
 body.linith-android .footer {
@@ -59,8 +137,27 @@ body.linith-android .footer {
   padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 
-body.linith-android button,
-body.linith-android select,
-body.linith-android input {
-  min-height: 40px;
+body.linith-android .settingsPanel {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: min(88dvh, 760px);
+  padding: 18px max(16px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+}
+
+body.linith-android .settingsRow,
+body.linith-android .settingsRangeRow {
+  min-height: 48px;
+}
+
+body.linith-android .settingsRow select {
+  min-height: 44px;
+}
+
+body.linith-android .settingsActions {
+  gap: 8px;
 }

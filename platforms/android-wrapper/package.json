@@ -1,6 +1,6 @@
 {
   "name": "linith-android-wrapper",
-  "version": "0.232.0",
+  "version": "0.24.0",
   "private": true,
   "description": "Android Studio wrapper for the shared Linith renderer build.",
   "license": "MIT",

@@ -257,6 +257,33 @@ test("a legal depth-zero native proposal is returned directly and committed", as
   assert.deepEqual(core.commits.map(({ action }) => actionKey(action)), [actionKey(proposal)]);
 });
 
+test("quiet Doctrinal book moves do not suppress a named personality", async () => {
+  const state = developmentState();
+  const bookAction: LinithAction = { type: "swan", r: 3, c: 4 };
+  const personalityAction: LinithAction = { type: "stone", r: 0, c: 0 };
+  assert.ok(applyAction(state, bookAction));
+  const core = new FakeNativeCore(() => nativeResult(
+    personalityAction,
+    1,
+    stableHash(ongoingState(state, personalityAction)),
+    []
+  ));
+  const output: VeryHardWorkerOutboundMessage[] = [];
+  const runtime = createVeryHardWorkerRuntime({
+    engine: fakeEngine(),
+    nativeCore: Promise.resolve(core),
+    lookupBook: () => ({ action: bookAction }),
+    postMessage: (message) => output.push(message),
+    now: () => 0
+  });
+
+  await runtime.handleMessage({ ...request(state, 31), style: "swarm" });
+  const result = output.at(-1);
+  assert.equal(result?.type === "result" ? result.engine : null, "native");
+  assert.equal(result?.type === "result" ? actionKey(result.action!) : null, actionKey(personalityAction));
+  assert.equal(core.searchCalls, 1);
+});
+
 test("a legal depth-zero TypeScript fallback is returned without consulting Hard", async () => {
   const state = developmentState();
   const output: VeryHardWorkerOutboundMessage[] = [];

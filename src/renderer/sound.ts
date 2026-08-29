@@ -10,6 +10,8 @@ const soundFiles: Record<SoundName, string> = {
   loss: "lose.wav"
 };
 
+const DEFAULT_VOLUME = 0.4;
+
 class SoundEngine implements LinithSoundApi {
   private context?: AudioContext;
   private readonly buffers = new Map<SoundName, AudioBuffer>();
@@ -31,7 +33,7 @@ class SoundEngine implements LinithSoundApi {
 
     const stored = Number.parseFloat(localStorage.getItem("linith_sfx_volume") ?? "");
     if (!this.connected) {
-      this.masterGain.gain.value = Number.isFinite(stored) ? clamp(stored) : 1;
+      this.masterGain.gain.value = Number.isFinite(stored) ? clamp(stored) : DEFAULT_VOLUME;
       this.outputGain.gain.value = 4.3;
       this.compressor.threshold.setValueAtTime(-8, context.currentTime);
       this.compressor.knee.setValueAtTime(6, context.currentTime);
@@ -70,7 +72,7 @@ class SoundEngine implements LinithSoundApi {
     }
 
     const stored = Number.parseFloat(localStorage.getItem("linith_sfx_volume") ?? "");
-    return Number.isFinite(stored) ? clamp(stored) : 0.4;
+    return Number.isFinite(stored) ? clamp(stored) : DEFAULT_VOLUME;
   }
 
   async play(name: SoundName, options: SoundOptions = {}): Promise<void> {

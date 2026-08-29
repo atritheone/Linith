@@ -87,7 +87,7 @@ test("Very Hard caches and pending work cannot cross lifecycle boundaries", () =
     /function reset\(\)\{\s*resetVeryHardSession\(\);/,
     /function startgame\(\)\{\s*resetVeryHardSession\(\);/,
     /function finishgame\(message, logLine\)\{\s*stopMasterLoop\(\);\s*resetVeryHardSession\(\);/,
-    /function enterrecital\(payload, fileName\)\{\s*resetVeryHardSession\(\);/,
+    /function enterrecital\(payload, fileName\)\{[\s\S]*?validateReplayFrames\(payload\?\.replay \|\| \[\]\);[\s\S]*?resetVeryHardSession\(\);/,
     /if \(history\.length <= 1\) return;[^\n]*\n\s*resetVeryHardSession\(\);/,
     /function reviewApply\(idx\)\{\s*resetVeryHardSession\(\);/,
     /function reviewBack\(fromAuto = false\)\{\s*if \(appMode === ['"]menu['"]\) return;\s*resetVeryHardSession\(\);/,

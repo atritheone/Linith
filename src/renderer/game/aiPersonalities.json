@@ -1,0 +1,123 @@
+[
+  {
+    "id": "doctrinal",
+    "label": "Doctrinal",
+    "goal": "Plays balanced, canonical Linith without a separate strategic bias.",
+    "signals": "Uses the objective evaluator as written and yields to every forced tactical result.",
+    "traits": {}
+  },
+  {
+    "id": "constrictor",
+    "label": "Constrictor",
+    "goal": "Suffocates opposing Swans while keeping its own formations safe.",
+    "signals": "Strong enemy-liberty pressure, closing pressure, containment, and self-preservation.",
+    "traits": {
+      "freezeUrgency": 0.25,
+      "selfPreservation": 0.8,
+      "libertyBalance": 0.45,
+      "containment": 1.25,
+      "territory": 0.35,
+      "fragmentation": 0.15,
+      "development": 0,
+      "earlyStone": 0.1,
+      "structure": 0.7,
+      "mobility": 0,
+      "sacrificeTolerance": 0.05
+    }
+  },
+  {
+    "id": "rupture",
+    "label": "Rupture",
+    "goal": "Fractures the opponent into disconnected Swan groups, then constricts them.",
+    "signals": "The strongest fragmentation preference, moderate closing pressure, and limited tolerance for positional concessions that create a real cut.",
+    "traits": {
+      "freezeUrgency": -0.1,
+      "selfPreservation": 0.35,
+      "libertyBalance": 0.15,
+      "containment": 0.35,
+      "territory": 0.05,
+      "fragmentation": 1.7,
+      "development": 0,
+      "earlyStone": 0,
+      "structure": 0.25,
+      "mobility": 0.15,
+      "sacrificeTolerance": 0.25
+    }
+  },
+  {
+    "id": "blizzard",
+    "label": "Blizzard",
+    "goal": "Forces freezes quickly, including through controlled opportunistic trades.",
+    "signals": "The strongest freeze urgency, lighter additional self-preservation, and the greatest tolerance for small concessions that produce a concrete freeze.",
+    "traits": {
+      "freezeUrgency": 1.7,
+      "selfPreservation": 0,
+      "libertyBalance": -0.1,
+      "containment": 0.4,
+      "territory": -0.1,
+      "fragmentation": 0,
+      "development": 0,
+      "earlyStone": 0.15,
+      "structure": 0.2,
+      "mobility": -0.1,
+      "sacrificeTolerance": 0.65
+    }
+  },
+  {
+    "id": "librarian",
+    "label": "Librarian",
+    "goal": "Plays cleanly and methodically, preserving its own silvers while reducing the opponent's.",
+    "signals": "The strongest liberty balance, stable mobility, low appetite for tactical theatre, and careful self-preservation.",
+    "traits": {
+      "freezeUrgency": -0.3,
+      "selfPreservation": 1,
+      "libertyBalance": 1.55,
+      "containment": 0.15,
+      "territory": 0.45,
+      "fragmentation": 0.1,
+      "development": 0.15,
+      "earlyStone": -0.1,
+      "structure": 0.1,
+      "mobility": 0.8,
+      "sacrificeTolerance": 0
+    }
+  },
+  {
+    "id": "swarm",
+    "label": "Swarm",
+    "goal": "Develops rapidly to many active Swans, then presses with the larger formation.",
+    "signals": "The strongest early development preference, reduced interest in quiet early Stones, moderate pressure, and active mobility.",
+    "traits": {
+      "freezeUrgency": 0.2,
+      "selfPreservation": 0.35,
+      "libertyBalance": 0.15,
+      "containment": 0.35,
+      "territory": 0,
+      "fragmentation": 0.1,
+      "development": 1.8,
+      "earlyStone": -1.5,
+      "structure": 0,
+      "mobility": 0.55,
+      "sacrificeTolerance": 0.2
+    }
+  },
+  {
+    "id": "fortress",
+    "label": "Fortress",
+    "goal": "Builds sturdy, choking structures and wins through durable containment.",
+    "signals": "The strongest structure and containment preferences, high self-preservation, territorial control, and deliberately slower development.",
+    "traits": {
+      "freezeUrgency": 0,
+      "selfPreservation": 1.25,
+      "libertyBalance": 0.25,
+      "containment": 1.7,
+      "territory": 1.2,
+      "fragmentation": 0.1,
+      "development": -0.35,
+      "earlyStone": 0.7,
+      "structure": 1.6,
+      "mobility": -0.2,
+      "sacrificeTolerance": 0
+    }
+  }
+]

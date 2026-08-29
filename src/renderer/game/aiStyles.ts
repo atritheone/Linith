@@ -1,18 +1,56 @@
-export interface AiStyleWeights {
-  wFreeze?: number;
-  wSelfFreeze?: number;
-  wMyLib?: number;
-  wOpLib?: number;
-  wRing?: number;
-  wSpace?: number;
+import personalityData from "./aiPersonalities.json";
+
+export const AI_STYLE_IDS = [
+  "doctrinal",
+  "constrictor",
+  "rupture",
+  "blizzard",
+  "librarian",
+  "swarm",
+  "fortress"
+] as const;
+
+export type AiStyleId = typeof AI_STYLE_IDS[number];
+
+export interface AiPersonalityTraits {
+  freezeUrgency?: number;
+  selfPreservation?: number;
+  libertyBalance?: number;
+  containment?: number;
+  territory?: number;
+  fragmentation?: number;
+  development?: number;
+  earlyStone?: number;
+  structure?: number;
+  mobility?: number;
+  sacrificeTolerance?: number;
 }
 
-export const AI_STYLES: Record<string, AiStyleWeights> = {
-  doctrinal: {},
-  constrictor: { wFreeze: 500, wSelfFreeze: -600, wMyLib: 2, wOpLib: -11, wRing: 1.4, wSpace: 1.5 },
-  rupture: { wFreeze: 420, wSelfFreeze: -650, wMyLib: 2, wOpLib: -7, wRing: 0.6, wSpace: 0.8 },
-  blizzard: { wFreeze: 600, wSelfFreeze: -450, wMyLib: 1, wOpLib: -5, wRing: 0.4, wSpace: 0.5 },
-  librarian: { wFreeze: 380, wSelfFreeze: -700, wMyLib: 5, wOpLib: -10, wRing: 0.3, wSpace: 1.2 },
-  swarm: { wFreeze: 520, wSelfFreeze: -620, wMyLib: 2, wOpLib: -8, wRing: 0.8, wSpace: 0.6 },
-  fortress: { wFreeze: 480, wSelfFreeze: -680, wMyLib: 1, wOpLib: -6, wRing: 1.6, wSpace: 2 }
-};
+export interface AiPersonalityProfile {
+  id: AiStyleId;
+  label: string;
+  goal: string;
+  signals: string;
+  traits: AiPersonalityTraits;
+}
+
+const profiles = personalityData as AiPersonalityProfile[];
+
+if (profiles.map(({ id }) => id).join(",") !== AI_STYLE_IDS.join(",")) {
+  throw new Error("AI personality data must contain every style in stable native-code order.");
+}
+
+export const AI_STYLE_LIST: readonly AiPersonalityProfile[] = Object.freeze(
+  profiles.map((profile) => Object.freeze({
+    ...profile,
+    traits: Object.freeze({ ...profile.traits })
+  }))
+);
+
+export const AI_STYLES: Readonly<Record<AiStyleId, AiPersonalityProfile>> = Object.freeze(
+  Object.fromEntries(AI_STYLE_LIST.map((profile) => [profile.id, profile]))
+) as Readonly<Record<AiStyleId, AiPersonalityProfile>>;
+
+export function aiPersonality(style: string | undefined): AiPersonalityProfile {
+  return AI_STYLES[style as AiStyleId] ?? AI_STYLES.doctrinal;
+}

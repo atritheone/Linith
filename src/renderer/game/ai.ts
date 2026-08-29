@@ -1,7 +1,7 @@
 // The action selector is isolated from the DOM so it can evolve independently
 // from rendering and platform wrappers.
 // @ts-nocheck -- incremental migration boundary for the inherited AI engine.
-import { AI_STYLES } from "./aiStyles";
+import { aiPersonality } from "./aiStyles";
 import { computeFreezesOn } from "./encirclement";
 import {
   countTotalSwans as countTotalSwansOn,
@@ -22,9 +22,8 @@ export function linithAI(board, current, difficulty = 'hard') {
       const OPP = current === SUN ? MOON : SUN;
       const DIRS8 = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
       const DIRS4 = [[-1,0],[1,0],[0,-1],[0,1]];
-      const STYLE = AI_STYLES;
-      const styleName = (window.linithGetStyle?.() || 'doctrinal');
-      const ST = STYLE[styleName] || {};
+      const PROFILE = aiPersonality(window.linithGetStyle?.() || 'doctrinal');
+      const styleName = PROFILE.id;
       const DECISIVE_CHOKE = 3, DECISIVE_RING  = 3.0;
 
       const inb=(r,c)=>r>=0&&c>=0&&r<SIZE&&c<SIZE;
@@ -289,6 +288,62 @@ export function linithAI(board, current, difficulty = 'hard') {
         return score;
       }
 
+      function tileCount(b, tile){
+        let count = 0;
+        for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(get(b,r,c)===tile) count++;
+        return count;
+      }
+
+      function stoneContactFor(p, b){
+        let count = 0;
+        for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+          if(!isActiveSwan(p,get(b,r,c))) continue;
+          for(const [nr,nc] of neigh8(r,c)) if(get(b,nr,nc)===STONE) count++;
+        }
+        return count;
+      }
+
+      function localMobilityFor(p, b){
+        let count = 0;
+        for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+          if(!isActiveSwan(p,get(b,r,c))) continue;
+          for(const [nr,nc] of neigh8(r,c)) if(isEmpty(b,nr,nc)) count++;
+        }
+        return count;
+      }
+
+      const personalityFeatureCache = new WeakMap();
+      function personalityFeatures(b){
+        const cached = personalityFeatureCache.get(b);
+        if(cached) return cached;
+        const features = {
+          groups: collectActiveGroups(b),
+          active: {
+            [SUN]: countActiveSwans(SUN,b),
+            [MOON]: countActiveSwans(MOON,b)
+          },
+          contact: {
+            [SUN]: stoneContactFor(SUN,b),
+            [MOON]: stoneContactFor(MOON,b)
+          },
+          mobility: {
+            [SUN]: localMobilityFor(SUN,b),
+            [MOON]: localMobilityFor(MOON,b)
+          },
+          stones: tileCount(b,STONE)
+        };
+        personalityFeatureCache.set(b,features);
+        return features;
+      }
+
+      const territoryCache = new WeakMap();
+      function cachedTerritory(b,p){
+        let cached = territoryCache.get(b);
+        if(!cached){ cached = { [SUN]:null,[MOON]:null }; territoryCache.set(b,cached); }
+        if(cached[p]===null) cached[p]=territoryAdvantage(b,p);
+        return cached[p];
+      }
+
       function evaluateStyled(bBefore, bAfter, myLibBeforeOverride = null, oppLibBeforeOverride = null, perspective = current){
         const perspectiveOpp = perspective===SUN ? MOON : SUN;
         const nb = clone(bAfter);
@@ -309,36 +364,57 @@ export function linithAI(board, current, difficulty = 'hard') {
 
         const frozeGain = (perspective===SUN ? (res.frozeMoon+res.sealedMoon) : (res.frozeSun +res.sealedSun));
         const selfLoss  = (perspective===SUN ? (res.frozeSun +res.sealedSun ) : (res.frozeMoon+res.sealedMoon));
+        const ringBefore = enemyRingPressure(bBefore, perspective);
         const ring      = enemyRingPressure(nb, perspective);
         const momentum  = bothAtSix(bBefore) ? 10 : 0;
 
-        const wFreeze     = (ST.wFreeze     ?? 500);
-        const wSelfFreeze = (ST.wSelfFreeze ?? -600);
-        const wMyLib      = (ST.wMyLib      ?? 5);
-        const wOpLib      = (ST.wOpLib      ?? -9);
-        const wRing       = (ST.wRing       ?? 0);
-        const wMomentum   = (ST.wMomentum   ?? momentum);
-        const wSpace      = (ST.wSpace      ?? 0);
-
         const totFrozen = (res.frozeSun+res.sealedSun) + (res.frozeMoon+res.sealedMoon);
         const phase = Math.max(0, Math.min(1, totFrozen/6));
-        const freezeBoost = 1 + (styleName==='blizzard' ? 0.25*phase : 0.12*phase);
-        const ringBoost   = 1 + (styleName==='fortress' ? 0.25*phase : 0.08*phase);
+        const freezeBoost = 1 + 0.12*phase;
+        const doctrinal = frozeGain * (500*freezeBoost)
+             + selfLoss  * -600
+             + myΔ       * 5
+             + oppΔ      * -9
+             + momentum  * frozeGain;
 
-        let terrΔ = 0;
-        if (wSpace !== 0){
-          const terrBefore = territoryAdvantage(bBefore, perspective);
-          const terrAfter  = territoryAdvantage(nb,      perspective);
-          terrΔ = terrAfter - terrBefore;
-        }
+        // Doctrinal remains the frozen compatibility baseline. Personalities
+        // only break strategically close decisions and cannot erase the core
+        // tactical value of a freeze or the cost of losing an active Swan.
+        if(styleName==='doctrinal') return doctrinal;
 
-        return frozeGain * (wFreeze*freezeBoost)
-             + selfLoss  * (wSelfFreeze)
-             + myΔ       * (wMyLib)
-             + oppΔ      * (wOpLib)
-             + ring      * (wRing*ringBoost)
-             + momentum  * frozeGain
-             + terrΔ     * wSpace;
+        const traits = PROFILE.traits;
+        const beforeFeatures = personalityFeatures(bBefore);
+        const afterFeatures = personalityFeatures(nb);
+        const fragmentationΔ =
+          (afterFeatures.groups[perspectiveOpp].length - beforeFeatures.groups[perspectiveOpp].length)
+          - (afterFeatures.groups[perspective].length - beforeFeatures.groups[perspective].length);
+        const developmentΔ =
+          (afterFeatures.active[perspective] - beforeFeatures.active[perspective])
+          - (afterFeatures.active[perspectiveOpp] - beforeFeatures.active[perspectiveOpp]);
+        const contactBefore = beforeFeatures.contact[perspectiveOpp] - beforeFeatures.contact[perspective];
+        const contactAfter = afterFeatures.contact[perspectiveOpp] - afterFeatures.contact[perspective];
+        const mobilityBefore = beforeFeatures.mobility[perspective] - beforeFeatures.mobility[perspectiveOpp];
+        const mobilityAfter = afterFeatures.mobility[perspective] - afterFeatures.mobility[perspectiveOpp];
+        const territoryΔ = (traits.territory ?? 0) === 0
+          ? 0
+          : cachedTerritory(nb,perspective) - cachedTerritory(bBefore,perspective);
+        const earlyStone = countTotalSwansOn(bBefore,perspective)<6 && afterFeatures.stones>beforeFeatures.stones ? 1 : 0;
+        const controlledConcession = (frozeGain>0 || fragmentationΔ>0) ? Math.max(0,-myΔ) : 0;
+
+        const personalityRaw =
+          (traits.freezeUrgency ?? 0) * frozeGain * 40
+          - (traits.selfPreservation ?? 0) * selfLoss * 50
+          + (traits.libertyBalance ?? 0) * (myΔ-oppΔ) * 3
+          + (traits.containment ?? 0) * (ring-ringBefore) * 4
+          + (traits.territory ?? 0) * territoryΔ * 0.15
+          + (traits.fragmentation ?? 0) * fragmentationΔ * 14
+          + (traits.development ?? 0) * developmentΔ * 18
+          + (traits.earlyStone ?? 0) * earlyStone * 12
+          + (traits.structure ?? 0) * (contactAfter-contactBefore) * 2.5
+          + (traits.mobility ?? 0) * (mobilityAfter-mobilityBefore) * 1.5
+          + (traits.sacrificeTolerance ?? 0) * Math.min(6,controlledConcession) * 6;
+        const personality = Math.max(-80,Math.min(80,personalityRaw));
+        return doctrinal + personality;
       }
 
       function decisiveStone(b, r, c, me){

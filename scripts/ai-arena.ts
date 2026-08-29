@@ -449,7 +449,11 @@ function selectAction(
       ? chooseVeryHardTimeBudget(state, settings.veryHardPlatform).budgetMs
       : settings.veryHardBudgetMs;
     const book = lookupOpeningBookAction(state);
-    if (book) {
+    const bookResult = book ? applyAction(state, book.action) : null;
+    const universalBookMove = style === "doctrinal"
+      || !!bookResult?.outcome
+      || (bookResult?.opponentLoss ?? 0) > 0;
+    if (book && bookResult && universalBookMove) {
       engines.nativeContinuation = [];
       if (nativeVeryHard && !nativeVeryHard.commitAction(state, book.action)) {
         throw new Error("Native Very Hard could not commit a legal opening-book action.");

@@ -27,7 +27,7 @@ def main():
     print("[train] dataset:", X.shape[0], "positions")
 
     # Tensors
-    X_t = torch.from_numpy(X)          # (N, 6, 10, 10)
+    X_t = torch.from_numpy(X)          # (N, 8, 10, 10)
     y_t = torch.from_numpy(y).view(-1, 1)  # (N, 1)
 
     dataset = TensorDataset(X_t, y_t)

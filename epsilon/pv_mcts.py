@@ -2,9 +2,19 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from action_space import ACTION_SIZE, encode_action
+try:
+    from .action_space import ACTION_SIZE, encode_action
+except ImportError:
+    from action_space import ACTION_SIZE, encode_action
 
 NUM_ACTIONS = ACTION_SIZE
+
+
+def _hashable_action(value):
+    """Normalise pybind list-backed actions for use as tree dictionary keys."""
+    if isinstance(value, (list, tuple)):
+        return tuple(_hashable_action(item) for item in value)
+    return value
 
 
 class PVNode:
@@ -83,16 +93,18 @@ class PV_MCTS:
 
         # ----- Main simulation loop -----
         for _ in range(max(0, num_simulations - 1)):
-            node, sim_env = self._select(env, root)
+            node, sim_env = self._select(env, root, root_player)
 
             if sim_env.state.done:
                 v = self._terminal_value(sim_env, root_player)
             else:
                 p, v = self._evaluate(sim_env)
+                if sim_env.state.current_player != root_player:
+                    v = -v
                 acts = sim_env.legal_actions()
                 self._expand(node, sim_env, acts, p)
 
-            self._backpropagate(node, v, root_player)
+            self._backpropagate(node, v)
 
         return {a: child.N for a, child in root.children.items()}
 
@@ -105,8 +117,8 @@ class PV_MCTS:
         Works with C++ env because GameState.to_tensor() is bound.
         """
         # Both Python and C++ LinithEnv expose env.state.to_tensor()
-        obs = env.state.to_tensor()                 # (6, 10, 10)
-        x = torch.from_numpy(obs).unsqueeze(0).to(self.device)  # (1, 6, 10, 10)
+        obs = env.state.to_tensor()                 # (8, 10, 10)
+        x = torch.from_numpy(obs).unsqueeze(0).to(self.device)  # (1, 8, 10, 10)
 
         with torch.no_grad():
             logits, value = self.net(x)
@@ -125,6 +137,7 @@ class PV_MCTS:
         """
         if not legal_actions:
             return
+        node.player = env.state.current_player
 
         # Build children with priors from policy vector
         total_p = 0.0
@@ -136,16 +149,17 @@ class PV_MCTS:
                 # Skip actions that can't be encoded (e.g. weird >6-swan subsets)
                 continue
             p = float(policy_vector[idx])
-            tmp.append((a, p))
+            tmp.append((_hashable_action(a), p))
             total_p += max(p, 0.0)
 
         # Fallback: if nothing encodable, make uniform over legal actions
         if not tmp:
             p_uniform = 1.0 / len(legal_actions)
-            for a in legal_actions:
+            for raw_action in legal_actions:
+                a = _hashable_action(raw_action)
                 child = node.children.get(a)
                 if child is None:
-                    child = PVNode(parent=node, action_from_parent=a, player=1 - node.player)
+                    child = PVNode(parent=node, action_from_parent=a, player=None)
                     node.children[a] = child
                 child.P = p_uniform
             return
@@ -157,21 +171,21 @@ class PV_MCTS:
             for a, _ in tmp:
                 child = node.children.get(a)
                 if child is None:
-                    child = PVNode(parent=node, action_from_parent=a, player=1 - node.player)
+                    child = PVNode(parent=node, action_from_parent=a, player=None)
                     node.children[a] = child
                 child.P = p_uniform
         else:
             for a, p in tmp:
                 child = node.children.get(a)
                 if child is None:
-                    child = PVNode(parent=node, action_from_parent=a, player=1 - node.player)
+                    child = PVNode(parent=node, action_from_parent=a, player=None)
                     node.children[a] = child
                 child.P = max(p, 0.0) / total_p
 
     # ---------------------------------------------------------
     #  SELECT
     # ---------------------------------------------------------
-    def _select(self, env, root: PVNode):
+    def _select(self, env, root: PVNode, root_player: int):
         """
         Traverse the tree from root using PUCT, return (leaf_node, sim_env).
         """
@@ -187,7 +201,8 @@ class PV_MCTS:
 
             for a, child in node.children.items():
                 # Standard AlphaZero PUCT
-                U = child.Q + self.c_puct * child.P * (sqrt_N / (1.0 + child.N))
+                exploitation = child.Q if node.player == root_player else -child.Q
+                U = exploitation + self.c_puct * child.P * (sqrt_N / (1.0 + child.N))
                 if U > best_score:
                     best_score = U
                     best_action = a
@@ -196,6 +211,7 @@ class PV_MCTS:
             # Step environment
             obs, reward, done, info = sim_env.step(best_action)
             node = best_child
+            node.player = sim_env.state.current_player
 
             if node.N == 0 or done:
                 break
@@ -205,21 +221,15 @@ class PV_MCTS:
     # ---------------------------------------------------------
     #  BACKPROP
     # ---------------------------------------------------------
-    def _backpropagate(self, node: PVNode, value: float, root_player: int):
+    def _backpropagate(self, node: PVNode, value: float):
         """
         Backpropagate value up the path.
         value is from root_player's perspective.
         """
         cur = node
-        cur_value = value
         while cur is not None:
-            if cur.player == root_player:
-                v = cur_value
-            else:
-                v = -cur_value
-
             cur.N += 1.0
-            cur.W += v
+            cur.W += value
             cur.Q = cur.W / cur.N
 
             cur = cur.parent
@@ -229,7 +239,7 @@ class PV_MCTS:
     # ---------------------------------------------------------
     def _terminal_value(self, env, root_player: int) -> float:
         winner = env.state.winner
-        if winner is None:
+        if winner is None or winner == 0:
             return 0.0
         return 1.0 if winner == root_player else -1.0
 

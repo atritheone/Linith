@@ -1,36 +1,58 @@
+Linith AI Personalities
 
-Constrictor (Default, Legacy AI)
+Difficulty controls how broadly and deeply the AI considers moves. Personality
+controls which strategically close move it prefers. Every personality obeys
+the same rules, forced wins, and unique tactical defenses.
 
-Goal - Suffocate. Max pressure on enemy silvers, rewards closing circles, avoids self-freezes.
+Doctrinal (Default)
 
-Signals - Strong enemy silver penalty, elevated circle pressure, tiny tolerance for minor self-loss if it freezes them.
+Goal - Play balanced, canonical Linith without a separate strategic bias.
+
+Signals - Uses the objective evaluator as written. Doctrinal is the zero-bias
+baseline against which all other personalities are measured.
+
+Constrictor
+
+Goal - Suffocate opposing Swans while keeping its own formations safe.
+
+Signals - Strong enemy-liberty pressure, closing pressure, containment, and
+self-preservation. It accepts only a tiny concession when that advances a
+concrete freeze.
 
 Rupture
 
-Goal - Fracture the opponent into many disconnected Swan groups, then constrict.
+Goal - Fracture the opponent into disconnected Swan groups, then constrict.
 
-Signals - Bonus for increasing enemy group count, moderate circle pressure, mild willingness to trade tempo for future cuts.
+Signals - The strongest bonus for increasing enemy group count, moderate
+closing pressure, and limited tolerance for positional concessions that create
+a real cut.
 
 Blizzard
 
-Goal - Force freezes quickly, even via opportunistic trades.
+Goal - Force freezes quickly, including through controlled opportunistic trades.
 
-Signals - Very high freeze reward, lighter self-freeze penalty than Constrictor, small sacrifice bias to accept short-term strife for a freeze.
+Signals - The strongest freeze urgency, lighter additional self-preservation,
+and the greatest tolerance for a small concession that produces a concrete
+freeze. It still cannot ignore a forced loss.
 
 Librarian
 
-Goal - Clean positional play. Keep your own silvers high, reduce theirs methodically.
+Goal - Play cleanly and methodically, preserving its own silvers while reducing
+the opponent's.
 
-Signals - Big weight on your own silvers, big penalty on theirs; least interested in circle theatrics.
+Signals - The strongest liberty balance, stable mobility, low appetite for
+circle theatrics, and careful self-preservation.
 
 Swarm
 
-Goal - Rapid development to many active swans, then press.
+Goal - Develop rapidly to many active Swans, then press with the larger formation.
 
-Signals - Early-game nudge toward Swan placement; moderate circle pressure; slightly down-weights early Stones.
+Signals - The strongest early Swan-development preference, reduced interest in
+quiet early Stones, moderate pressure, and active mobility.
 
 Fortress
 
-Goal - Build sturdy, choking structures and win on containment.
+Goal - Build sturdy, choking structures and win through durable containment.
 
-Signals - Highest circle-pressure emphasis; conservative about self-freezes; slower, heavier positions.
+Signals - The strongest structure and containment preferences, high
+self-preservation, territorial control, and deliberately slower development.

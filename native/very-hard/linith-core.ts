@@ -10,6 +10,18 @@
  * Build with scripts/build-wasm.mjs in this directory.
  */
 
+import {
+  personalityContainment,
+  personalityDevelopment,
+  personalityFragmentation,
+  personalityFreezeUrgency,
+  personalityLibertyBalance,
+  personalityMobility,
+  personalitySelfPreservation,
+  personalityStructure,
+  personalityTerritory
+} from "./personality.generated";
+
 const BOARD_CELLS: i32 = 100;
 const MAX_ACTIONS: i32 = 1216; // 100 stones + 100 Swans + 2 * 63 groups * 8 dirs
 const MAX_PLY: i32 = 24;
@@ -906,6 +918,38 @@ function groupUrgency(player: i32): i32 {
   return score;
 }
 
+function activeGroupCount(player: i32): i32 {
+  const target = activeTile(player);
+  let seenLo: u64 = 0;
+  let seenHi: u64 = 0;
+  let groups = 0;
+  for (let start = 0; start < BOARD_CELLS; start++) {
+    if (tileAt(start) != target || maskHas(seenLo, seenHi, start)) continue;
+    groups++;
+    let stackSize = 0;
+    unchecked(groupStack[stackSize++] = u8(start));
+    seenLo = addLow(seenLo, start);
+    seenHi = addHigh(seenHi, start);
+    while (stackSize > 0) {
+      const cell = i32(unchecked(groupStack[--stackSize]));
+      const r = rowOf(cell);
+      const c = colOf(cell);
+      for (let d = 0; d < 8; d++) {
+        const nr = r + unchecked(ALL_DIR_R[d]);
+        const nc = c + unchecked(ALL_DIR_C[d]);
+        if (!inBounds(nr, nc)) continue;
+        const next = cellAt(nr, nc);
+        if (tileAt(next) == target && !maskHas(seenLo, seenHi, next)) {
+          seenLo = addLow(seenLo, next);
+          seenHi = addHigh(seenHi, next);
+          unchecked(groupStack[stackSize++] = u8(next));
+        }
+      }
+    }
+  }
+  return groups;
+}
+
 function localMobility(player: i32): i32 {
   const target = activeTile(player);
   let score = 0;
@@ -998,8 +1042,9 @@ function evaluatePosition(perspective: i32): i32 {
   const frozen = theirFrozen * 18_000 - myFrozen * 19_500;
   const activity = (myActive - theirActive) * 4_800;
   const libertyScore = (myLiberties - theirLiberties) * 92;
+  const contactDifference = stoneContacts(opponent) - stoneContacts(perspective);
   const pressure = (groupTightness(opponent) - groupTightness(perspective)) * 42 +
-    (stoneContacts(opponent) - stoneContacts(perspective)) * 210;
+    contactDifference * 210;
   const urgency = groupUrgency(opponent) - groupUrgency(perspective);
   const territory = territoryBalance(perspective, opponent);
   const territoryScore = territory * 18;
@@ -1007,33 +1052,32 @@ function evaluatePosition(perspective: i32): i32 {
   const totalTheirs = countTotal(opponent);
   const development = (totalMine - totalTheirs) * 260;
   const centre = (centreControl(perspective) - centreControl(opponent)) * 6;
-  const mobility = (localMobility(perspective) - localMobility(opponent)) * 115;
+  const mobilityDifference = localMobility(perspective) - localMobility(opponent);
+  const mobility = mobilityDifference * 115;
   const deployed = min<f64>(1.0, f64(totalMine + totalTheirs) / 12.0);
   const phaseRaw = (1.0 - deployed) * f64(development + centre) * 0.2 +
     deployed * f64(pressure + urgency) * 0.08;
   const phase = i32(Math.floor(phaseRaw + 0.5));
   const tempo = (currentPlayer == perspective ? 1 : -1) * max<i32>(1, actionsLeft) * 70;
 
-  let wFreeze = 500.0;
-  let wMyLib = 5.0;
-  let wOpLib = -9.0;
-  let wRing = 0.0;
-  let wSpace = 0.0;
-  if (searchStyle == 1) { wMyLib = 2.0; wOpLib = -11.0; wRing = 1.4; wSpace = 1.5; }
-  else if (searchStyle == 2) { wFreeze = 420.0; wMyLib = 2.0; wOpLib = -7.0; wRing = 0.6; wSpace = 0.8; }
-  else if (searchStyle == 3) { wFreeze = 600.0; wMyLib = 1.0; wOpLib = -5.0; wRing = 0.4; wSpace = 0.5; }
-  else if (searchStyle == 4) { wFreeze = 380.0; wMyLib = 5.0; wOpLib = -10.0; wRing = 0.3; wSpace = 1.2; }
-  else if (searchStyle == 5) { wFreeze = 520.0; wMyLib = 2.0; wOpLib = -8.0; wRing = 0.8; wSpace = 0.6; }
-  else if (searchStyle == 6) { wFreeze = 480.0; wMyLib = 1.0; wOpLib = -6.0; wRing = 1.6; wSpace = 2.0; }
   const libertyDifference = myLiberties - theirLiberties;
-  const pressureSign = pressure < 0 ? -1.0 : pressure > 0 ? 1.0 : 0.0;
-  const territorySign = territoryScore < 0 ? -1.0 : territoryScore > 0 ? 1.0 : 0.0;
-  const styleRaw = (wFreeze - 500.0) * f64(theirFrozen - myFrozen) * 0.08 +
-    (wMyLib - 5.0) * f64(libertyDifference) * 3.0 +
-    (wOpLib + 9.0) * f64(libertyDifference) * 2.0 +
-    wRing * pressureSign * min<f64>(80.0, f64(abs(pressure)) / 100.0) +
-    (wSpace - 1.0) * territorySign * min<f64>(60.0, f64(abs(territoryScore)) / 20.0);
-  const styleDelta = max<i32>(-300, min<i32>(300, i32(Math.floor(styleRaw + 0.5))));
+  const pressureSignal = max<f64>(-80.0, min<f64>(80.0, f64(pressure) / 100.0));
+  const territorySignal = max<f64>(-60.0, min<f64>(60.0, f64(territoryScore) / 20.0));
+  const urgencySignal = max<f64>(-60.0, min<f64>(60.0, f64(urgency) / 500.0));
+  const fragmentation = personalityFragmentation(searchStyle);
+  const fragmentationBalance = fragmentation == 0.0
+    ? 0
+    : activeGroupCount(opponent) - activeGroupCount(perspective);
+  const styleRaw = 3.0 * (personalityFreezeUrgency(searchStyle) * f64(theirFrozen - myFrozen) * 35.0 +
+    personalitySelfPreservation(searchStyle) * urgencySignal +
+    personalityLibertyBalance(searchStyle) * f64(libertyDifference) * 4.0 +
+    personalityContainment(searchStyle) * pressureSignal +
+    personalityTerritory(searchStyle) * territorySignal +
+    fragmentation * f64(fragmentationBalance) * 25.0 +
+    personalityDevelopment(searchStyle) * f64(totalMine - totalTheirs) * 20.0 +
+    personalityStructure(searchStyle) * f64(contactDifference) * 3.0 +
+    personalityMobility(searchStyle) * f64(mobilityDifference) * 1.5);
+  const styleDelta = max<i32>(-900, min<i32>(900, i32(Math.floor(styleRaw + 0.5))));
   const value = frozen + activity + libertyScore + pressure + territoryScore + development +
     centre + mobility + urgency + phase + tempo + styleDelta;
   return max<i32>(-MATE_SCORE / 4, min<i32>(MATE_SCORE / 4, value));

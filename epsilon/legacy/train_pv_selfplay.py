@@ -29,14 +29,14 @@ class SelfPlayDataset(Dataset):
         self.Z = Z.astype(np.float32)
 
         assert self.X.shape[0] == self.Pi.shape[0] == self.Z.shape[0]
-        assert self.X.shape[1:] == (6, 10, 10)
+        assert self.X.shape[1:] == (8, 10, 10)
         assert self.Pi.shape[1] == ACTION_SIZE
 
     def __len__(self):
         return self.X.shape[0]
 
     def __getitem__(self, idx):
-        x = self.X[idx]        # (6,10,10)
+        x = self.X[idx]        # (8,10,10)
         pi = self.Pi[idx]      # (A,)
         z = self.Z[idx]        # ()
         return (
@@ -150,7 +150,7 @@ def train_one_model(
 
         for batch in loader:
             x, target_pi, target_z = batch
-            x = x.to(dev)                    # [B,6,10,10]
+            x = x.to(dev)                    # [B,8,10,10]
             target_pi = target_pi.to(dev)    # [B,A]
             target_z = target_z.to(dev)      # [B]
 

@@ -1,4 +1,5 @@
 import type { Board, Player } from "../../encirclement";
+import { AI_STYLE_IDS } from "../../aiStyles";
 import type { LinithAction, SearchState } from "../../rulesEngine";
 
 interface WasmCoreExports {
@@ -102,15 +103,9 @@ const DIRECTIONS = [
   [-1, -1], [-1, 1], [1, -1], [1, 1]
 ] as const;
 
-const STYLE_CODES: Record<string, number> = {
-  doctrinal: 0,
-  constrictor: 1,
-  rupture: 2,
-  blizzard: 3,
-  librarian: 4,
-  swarm: 5,
-  fortress: 6
-};
+const STYLE_CODES: Readonly<Record<string, number>> = Object.freeze(
+  Object.fromEntries(AI_STYLE_IDS.map((style, index) => [style, index]))
+);
 
 function defaultNow(): number {
   return globalThis.performance?.now?.() ?? Date.now();

@@ -21,7 +21,7 @@ def play_one_game_value_mcts(
     Play one full game of Linith using ValueMCTS.
 
     Returns:
-      states:  list of np.ndarray (6,10,10)
+      states:  list of np.ndarray (8,10,10)
       players: list of int (SUN or MOON) for each state
       winner:  SUN / MOON / None
     """
@@ -68,7 +68,7 @@ def generate_value_dataset_from_mcts(
     Generate (state, value) pairs via self-play using ValueMCTS.
 
     Returns:
-      X: (N, 6, 10, 10)
+      X: (N, 8, 10, 10)
       y: (N,) in [-1, 0, 1], from player-to-move perspective.
     """
     all_states: List[np.ndarray] = []

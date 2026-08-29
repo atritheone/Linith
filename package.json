@@ -1,6 +1,6 @@
 {
   "name": "linith",
-  "version": "0.232.0",
+  "version": "0.24.0",
   "description": "Abstract strategy game built with Electron, Vite, and TypeScript",
   "homepage": "https://atritheone.com/linith",
   "author": {
@@ -22,6 +22,7 @@
     "dist:mac": "npm run build && electron-builder --mac dmg zip",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "arena:legacy": "node --import tsx scripts/compare-legacy-ai.ts",
+    "audit:personalities": "node --import tsx scripts/audit-ai-personalities.ts",
     "arena:very-hard": "node --import tsx scripts/ai-arena.ts --challenger=very-hard --opponent=hard",
     "ladder:very-hard": "node --import tsx scripts/ai-ladder.ts",
     "arena:very-hard:prototype": "node --import tsx scripts/benchmark-very-hard.ts",

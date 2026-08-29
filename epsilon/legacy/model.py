@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from action_space import ACTION_SIZE
+try:
+    from ..action_space import ACTION_SIZE
+except ImportError:
+    from action_space import ACTION_SIZE
 
 
 class LinithNet(nn.Module):
@@ -12,7 +15,7 @@ class LinithNet(nn.Module):
     Combined policy + value network for Linith.
 
     Input:
-      x: (batch, 6, 10, 10)
+      x: (batch, 8, 10, 10)
 
     Outputs:
       policy_logits: (batch, ACTION_SIZE) – unnormalized log-probabilities over actions
@@ -23,7 +26,7 @@ class LinithNet(nn.Module):
         super().__init__()
 
         # shared trunk
-        self.conv1 = nn.Conv2d(6, 32, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(8, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
 
@@ -37,7 +40,7 @@ class LinithNet(nn.Module):
         self.fc_value = nn.Linear(256, 1)
 
     def forward(self, x):
-        # x: (B, 6, 10, 10)
+        # x: (B, 8, 10, 10)
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
@@ -49,3 +52,28 @@ class LinithNet(nn.Module):
         value = torch.tanh(value_raw)      # clamp to [-1, 1]
 
         return policy_logits, value
+
+    def load_state_dict(self, state_dict, strict=True, assign=False):
+        adapted = state_dict.copy()
+        current = super().state_dict()
+        for key in ("conv1.weight", "fc_policy.weight", "fc_policy.bias"):
+            source = adapted.get(key)
+            target = current.get(key)
+            if source is None or target is None or source.shape == target.shape:
+                continue
+            merged = target.clone()
+            if key == "conv1.weight" and source.ndim == 4:
+                bounds = tuple(min(a, b) for a, b in zip(source.shape, target.shape))
+                slices = tuple(slice(0, n) for n in bounds)
+                merged[slices] = source[slices]
+            elif key.startswith("fc_policy"):
+                rows = min(704, source.shape[0], target.shape[0])
+                if source.ndim == 2:
+                    merged[:rows] = source[:rows]
+                else:
+                    merged[:rows] = source[:rows]
+            adapted[key] = merged
+        try:
+            return super().load_state_dict(adapted, strict=strict, assign=assign)
+        except TypeError:
+            return super().load_state_dict(adapted, strict=strict)

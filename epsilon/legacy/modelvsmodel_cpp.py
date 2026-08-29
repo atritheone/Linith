@@ -29,9 +29,9 @@ encode_action = encode_action_cpp
 # ---------------------------------------------------------
 def make_cpp_eval_fn(net: LinithPVNet, device: torch.device):
     def eval_fn(env: LinithEnv):
-        obs = env.state.to_tensor()  # (6,10,10) numpy from C++
+        obs = env.state.to_tensor()  # (8,10,10) numpy from C++
         obs_np = np.array(obs, dtype=np.float32, copy=False)
-        obs_t = torch.from_numpy(obs_np).unsqueeze(0).to(device)  # [1,6,10,10]
+        obs_t = torch.from_numpy(obs_np).unsqueeze(0).to(device)  # [1,8,10,10]
 
         with torch.no_grad():
             logits, value = net(obs_t)
@@ -79,7 +79,7 @@ class ReplayBuffer:
     def build_dataset(self):
         if not self.states:
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, ACTION_SIZE), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )
@@ -395,7 +395,7 @@ def generate_self_play_two_models(
     else:
         if not legacy_states:
             return (
-                np.empty((0,6,10,10), np.float32),
+                np.empty((0,8,10,10), np.float32),
                 np.empty((0,NUM_ACTIONS), np.float32),
                 np.empty((0,), np.float32),
             )

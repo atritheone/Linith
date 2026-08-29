@@ -58,7 +58,7 @@ def main():
     )
     print("[train_az] dataset:", X.shape[0], "positions")
 
-    X_t = torch.from_numpy(X)                       # (N, 6, 10, 10)
+    X_t = torch.from_numpy(X)                       # (N, 8, 10, 10)
     pi_t = torch.from_numpy(pi)                    # (N, ACTION_SIZE)
     v_t = torch.from_numpy(v).view(-1, 1)          # (N, 1)
 

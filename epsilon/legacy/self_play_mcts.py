@@ -22,7 +22,7 @@ def mcts_self_play_game(
     Play one game of Linith using MCTS-guided self-play.
 
     Returns:
-      states:  list of np.ndarray (6,10,10)
+      states:  list of np.ndarray (8,10,10)
       policies: list of np.ndarray (ACTION_SIZE,) visit distributions
       players: list of int (SUN or MOON) at each state
       winner:  SUN / MOON / None
@@ -91,7 +91,7 @@ def generate_mcts_self_play_dataset(
     Generate (state, policy, value) triples via MCTS self-play.
 
     Returns:
-      X:  (N, 6, 10, 10)
+      X:  (N, 8, 10, 10)
       pi: (N, ACTION_SIZE)
       v:  (N,)
     """

@@ -59,8 +59,8 @@ def make_cpp_eval_fn(net: LinithPVNet, device: torch.device, use_amp: bool = Tru
 
     # ---- single-environment path (root eval, or any scalar use) ----
     def eval_single(env: LinithEnv):
-        obs_np = np.asarray(env.state.to_tensor(), dtype=np.float32)  # (6,10,10)
-        obs_t = torch.from_numpy(obs_np).unsqueeze(0)                 # [1,6,10,10]
+        obs_np = np.asarray(env.state.to_tensor(), dtype=np.float32)  # (8,10,10)
+        obs_t = torch.from_numpy(obs_np).unsqueeze(0)                 # [1,8,10,10]
 
         if device.type == "cuda":
             obs_t = obs_t.pin_memory().to(device, non_blocking=True)
@@ -83,7 +83,7 @@ def make_cpp_eval_fn(net: LinithPVNet, device: torch.device, use_amp: bool = Tru
         for env in env_list:
             obs_list.append(np.asarray(env.state.to_tensor(), dtype=np.float32))
 
-        obs_np = np.stack(obs_list, axis=0)       # [B,6,10,10]
+        obs_np = np.stack(obs_list, axis=0)       # [B,8,10,10]
         obs_t = torch.from_numpy(obs_np)
 
         if device.type == "cuda":
@@ -150,7 +150,7 @@ class ReplayBuffer:
     def build_dataset(self):
         if not self.states:
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, ACTION_SIZE), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )
@@ -277,7 +277,7 @@ def generate_self_play(
                 if not use_mcts:
                     t0 = time.time()
                     with torch.no_grad():
-                        obs_t = torch.from_numpy(obs).unsqueeze(0).to(dev)  # [1,6,10,10]
+                        obs_t = torch.from_numpy(obs).unsqueeze(0).to(dev)  # [1,8,10,10]
                         policy_logits, value = net(obs_t)  # logits: [1,ACTION_SIZE]
                         policy_logits = policy_logits[0]   # [ACTION_SIZE]
                     t1 = time.time()
@@ -544,7 +544,7 @@ def generate_self_play(
         if X.shape[0] == 0:
             print("\nNo self-play games completed successfully; no dataset generated.")
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, NUM_ACTIONS), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )
@@ -552,7 +552,7 @@ def generate_self_play(
         if not legacy_states:
             print("\n No self-play games completed successfully; no dataset generated.")
             return (
-                np.empty((0, 6, 10, 10), dtype=np.float32),
+                np.empty((0, 8, 10, 10), dtype=np.float32),
                 np.empty((0, NUM_ACTIONS), dtype=np.float32),
                 np.empty((0,), dtype=np.float32),
             )

@@ -441,6 +441,8 @@ def main():
             str(args.weight_decay),
             "--lr-schedule",
             args.lr_schedule,
+            "--device",
+            args.device,
         ]
         if args.symmetry_aug:
             train_cmd.append("--symmetry-aug")

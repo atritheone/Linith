@@ -3,6 +3,7 @@
 // @ts-nocheck -- incremental migration boundary for the original UI/game coordinator.
 import { linithAI } from "./ai";
 import { computeFreezesOn } from "./encirclement";
+import { simulatePush as simulateRulesPush } from "./rulesEngine";
 import VeryHardWorker from "./veryHard/worker?worker&inline";
 import { chooseVeryHardTimeBudget, detectVeryHardPlatform } from "./veryHard/timeManager";
 import { playReady, sfxReady } from "../sound";
@@ -86,11 +87,11 @@ export function initGame(): void {
     let activeVeryHardRequest = null;
     let aiThinking = false;
 
-    let aiDifficulty = (localStorage.getItem('linith_ai_difficulty') || 'medium');   // default ai difficulty
+    let aiDifficulty = (localStorage.getItem('linith_ai_difficulty') || 'hard');   // default ai difficulty
     // difficulty bridge (shared via localstorage)
-    window.linithGetDifficulty = ()=> localStorage.getItem('linith_ai_difficulty') || 'medium';
+    window.linithGetDifficulty = ()=> localStorage.getItem('linith_ai_difficulty') || 'hard';
     window.linithSetDifficulty = (d)=> {
-      const nextDifficulty = d || 'medium';
+      const nextDifficulty = d || 'hard';
       const changed = nextDifficulty !== aiDifficulty;
       aiDifficulty = nextDifficulty;
       localStorage.setItem('linith_ai_difficulty', aiDifficulty);
@@ -283,16 +284,11 @@ export function initGame(): void {
 
     function applyClockVisibility() {
       // stopwatch visibility
-      if (clockMode === 'stopwatch') {
-        elTimer?.classList.remove('hidden');
-      } else {
-        elTimer?.classList.add('hidden');
-      }
+      setVisible(elTimer, clockMode === 'stopwatch');
 
       // chess clocks group visibility
       const chessOn = clockMode.startsWith('chess');
-      if (chessOn) elClocks?.classList.remove('hidden');
-      else         elClocks?.classList.add('hidden');
+      setVisible(elClocks, chessOn);
 
       // ensure the correct faces are shown/hidden (AI vs human)
       updateClockFacesVisibility();
@@ -303,22 +299,22 @@ export function initGame(): void {
 
       // if not in a chess mode, show both spans (the group is hidden elsewhere)
       if (!clockMode.startsWith('chess')) {
-        elClockSun.style.display  = '';
-        elClockMoon.style.display = '';
+        setVisible(elClockSun, true);
+        setVisible(elClockMoon, true);
         return;
       }
 
       // local (human vs human) - show both faces
       if (aiSide === null) {
-        elClockSun.style.display  = '';
-        elClockMoon.style.display = '';
+        setVisible(elClockSun, true);
+        setVisible(elClockMoon, true);
         return;
       }
 
       // ai game - show ONLY the human's face
       const h = humanSide(); // already defined above
-      elClockSun.style.display  = (h === 'SUN')  ? '' : 'none';
-      elClockMoon.style.display = (h === 'MOON') ? '' : 'none';
+      setVisible(elClockSun, h === 'SUN');
+      setVisible(elClockMoon, h === 'MOON');
     }
 
     function markActive(side) {
@@ -437,6 +433,7 @@ export function initGame(): void {
     const elBoard      = document.getElementById('board');
     const elLog        = document.getElementById('log');
     const elStartMenu  = document.getElementById('startMenu');
+    const elHistorySection = document.getElementById('historySection');
     const elTurn       = document.getElementById('turnInfo');
     const elTimer      = document.getElementById('timer');
     const elClocks     = document.getElementById('chessClocks');
@@ -460,6 +457,11 @@ export function initGame(): void {
     const btnReplayPP      = document.getElementById('replayPlayPause');
     const inputReplaySpeed = document.getElementById('replaySpeed');
     const elReplaySpeedVal = document.getElementById('replaySpeedVal');
+
+    function setVisible(element, visible){
+      if (!element) return;
+      element.hidden = !visible;
+    }
 
     // Track final outcome texts to embed in saved game records
     let lastOutcomeShort = null;    // e.g. "Sun wins.", "Draw by saturation."
@@ -497,7 +499,7 @@ export function initGame(): void {
 
     function setReplayControlsVisible(v){
       if (!elReplayControls) return;
-      elReplayControls.style.display = v ? 'flex' : 'none';
+      setVisible(elReplayControls, v);
     }
 
     function updateReplayButtonIcon(){
@@ -1004,7 +1006,9 @@ export function initGame(): void {
 
     /* -------------------- logging -------------------- */
     function log(msg){
-      elLog.innerHTML += `<div>${msg}</div>`;
+      const row = document.createElement('div');
+      row.textContent = String(msg ?? '');
+      elLog.appendChild(row);
       elLog.scrollTop = elLog.scrollHeight;
       updateLogActive();
     }
@@ -1058,7 +1062,7 @@ export function initGame(): void {
         const frag = document.createDocumentFragment();
         for (const m of msgs){
           const d = document.createElement('div');
-          d.innerHTML = m;
+          d.textContent = String(m ?? '');
           frag.appendChild(d);
         }
         elLog.insertBefore(frag, refNode);
@@ -1661,6 +1665,31 @@ export function initGame(): void {
         }
       }
 
+      // pushes - any non-empty subset of active enemy Swans, translated in a
+      // common legal direction. Each pushed Swan must have an adjacent active
+      // friendly Swan; the pusher does not lock the translation direction.
+      const enemyCoords=[]; for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+        const v=b[r][c]; if((player===SUN && v===SWAN_MOON)||(player===MOON && v===SWAN_SUN)) enemyCoords.push([r,c]);
+      }
+      const maxEnemyK = Math.min(6, enemyCoords.length);
+      for (let k = 1; k <= maxEnemyK; k++){
+        for (const subset of kCombinations(enemyCoords, k)){
+          for (const dir of DIRS8L){
+            const sim = simulateRulesPush(
+              b,
+              player,
+              subset.map(([r,c])=>({r,c})),
+              dir
+            );
+            if (!sim) continue;
+            const changed = subset
+              .map(([r,c])=>[r+dir[0],c+dir[1]])
+              .concat(sim.stonesTo.map(({r,c})=>[r,c]));
+            pushScored('push', {swans: subset, dir}, sim.board, changed);
+          }
+        }
+      }
+
       cand.sort((a,b)=> b.score - a.score);
       return cand;
     }
@@ -1721,12 +1750,12 @@ export function initGame(): void {
 
       if (recite === true){
         insertHintLogsRecital([
-          `<b>Best</b>: ${fmtAct(best)} — ${best.why}`,
-          `<b>Worst</b>: ${fmtAct(worst)} — ${worst.why}`,
+          `Best: ${fmtAct(best)} — ${best.why}`,
+          `Worst: ${fmtAct(worst)} — ${worst.why}`,
         ]);
       } else {
-        log(`<b>Best</b>: ${fmtAct(best)} — ${best.why}`);
-        log(`<b>Worst</b>: ${fmtAct(worst)} — ${worst.why}`);
+        log(`Best: ${fmtAct(best)} — ${best.why}`);
+        log(`Worst: ${fmtAct(worst)} — ${worst.why}`);
       }
 
       // paint and auto-clear highlights after a short delay
@@ -2194,7 +2223,7 @@ export function initGame(): void {
           isMove: true,
           log: msgMoon
         });
-        timerStart();
+        if (clockMode === 'stopwatch') timerStart();
         render()
         aiturn();
       }
@@ -2383,20 +2412,35 @@ export function initGame(): void {
         }
       }
 
-      // turn pill
+      // surrounding turn/status HUD (board rendering above is intentionally unchanged)
       const isGameActive = (appMode === 'playing' || appMode === 'review');
       if (!isGameActive) { elTurn.innerHTML = ''; return; }
 
-      let phtml='';
+      let phaseLabel = '';
+      let statusText = '';
+      let statusMeta = '';
+      let statusSide = '';
       if(turn==='setup'){
-        phtml = `<span class="pill ${toPlace==='sun'?'sun':'moon'}">Setup: ${(toPlace==='sun')? 'Sun place first Swan' : 'Moon place second Swan (not adjacent)'}</span>`;
+        phaseLabel = 'Setup';
+        statusSide = toPlace === 'sun' ? 'turnStatusSun' : 'turnStatusMoon';
+        statusText = toPlace === 'sun'
+          ? 'Sun places first Swan'
+          : 'Moon places second Swan (not adjacent)';
       } else {
-        const who = current===SUN? 'Sun ☼' : 'Moon ☾';
-        const acts = `${movesLeft} action${movesLeft>1?'s':''}`;
-        const thinking = aiThinking && aiSide === current ? ' • AI thinking…' : '';
-        phtml = `<span class="pill ${current===SUN?'sun':'moon'}">Turn: ${who}${movesLeft>1 ? ` • ${acts}` : ''}${thinking}</span>`;
+        phaseLabel = appMode === 'review' ? 'Review' : 'Turn';
+        statusSide = current === SUN ? 'turnStatusSun' : 'turnStatusMoon';
+        statusText = `${current === SUN ? 'Sun' : 'Moon'}${aiThinking && aiSide === current ? ' · AI thinking' : ''}`;
+        if (movesLeft > 1) statusMeta = `${String(movesLeft).padStart(2, '0')} actions`;
       }
-      elTurn.innerHTML = phtml;
+      elTurn.innerHTML = `
+        <div class="turnStatus ${statusSide}">
+          <span class="statusMarker" aria-hidden="true"></span>
+          <span class="statusCopy">
+            <span class="statusLabel">${phaseLabel}</span>
+            <span class="statusText">${statusText}</span>
+          </span>
+          ${statusMeta ? `<span class="statusCount">${statusMeta}</span>` : ''}
+        </div>`;
 
       updateActionButtonsEnabled();
     }
@@ -2417,6 +2461,9 @@ export function initGame(): void {
       history = [];
       movesLeft = 1;
       gameOver = false;
+      lastOutcomeShort = null;
+      lastOutcomeDetailed = null;
+      setVisible(confirmBox, false);
       // ensure no lingering AI side from imported recite
       aiSide = null;
 
@@ -2433,9 +2480,10 @@ export function initGame(): void {
       replay = null;
       replayIdx = 0;
       updateReviewButtons();
-      if (elStartMenu) elStartMenu.style.display = 'grid';
-      if (elLog) { elLog.style.display = 'none';
-      elLog.innerHTML = ''; }
+      setVisible(elStartMenu, true);
+      setVisible(elHistorySection, false);
+      setVisible(confirmBox, false);
+      if (elLog) elLog.innerHTML = '';
 
       // Restore user preference for clock mode (avoid lingering recite mode)
       try {
@@ -2467,6 +2515,9 @@ export function initGame(): void {
       appMode = 'playing';
       recite = false;
       gameOver = false;
+      lastOutcomeShort = null;
+      lastOutcomeDetailed = null;
+      setVisible(confirmBox, false);
       replay = null;
       replayIdx = 0;
       updateReviewButtons();
@@ -2483,8 +2534,9 @@ export function initGame(): void {
       movesLeft = 1;
       moveNumber = 0;
       if (elLog) elLog.innerHTML = '';
-      if (elStartMenu) elStartMenu.style.display = 'none';
-      if (elLog) elLog.style.display = 'block';
+      setVisible(elStartMenu, false);
+      setVisible(elHistorySection, true);
+      setVisible(confirmBox, false);
       updateActionButtonsEnabled();
 
       try {
@@ -3583,61 +3635,25 @@ export function initGame(): void {
           console.warn('Board element not found; defaulting to window center.');
           return showMessageCenteredOnScreen(msg);
         }
-
-        // create message box
-        const box = document.createElement('div');
-        box.textContent = msg;
-
-        Object.assign(box.style, {
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          padding: '1.2rem 2rem',
-          background: 'var(--panel)',
-          color: 'var(--text)',
-          border: '2px solid var(--black)',
-          borderRadius: '12px',
-          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)',
-          fontSize: '1.1rem',
-          fontFamily: 'system-ui, sans-serif',
-          zIndex: 9999,
-          pointerEvents: 'none',
-          opacity: '0',
-          transition: 'opacity 0.3s ease'
-        });
-
-        board.appendChild(box);
-
-        // fade-in
-        requestAnimationFrame(() => { box.style.opacity = '1'; });
-
-        // fade-out after delay
-        setTimeout(() => {
-          box.style.opacity = '0';
-          setTimeout(() => box.remove(), 300);
-        }, 5000);
+        showTransientMessage(msg, board, false);
       }
 
       // fallback if board not found
       function showMessageCenteredOnScreen(msg) {
+        showTransientMessage(msg, document.body, true);
+      }
+
+      function showTransientMessage(msg, host, fixed) {
         const box = document.createElement('div');
         box.textContent = msg;
-        Object.assign(box.style, {
-          position: 'fixed',
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          padding: '1.2rem 2rem',
-          background: 'var(--panel)',
-          color: 'var(--text)',
-          border: '2px solid var(--black)',
-          borderRadius: '12px',
-          fontFamily: 'system-ui, sans-serif',
-          zIndex: 9999
-        });
-        document.body.appendChild(box);
-        setTimeout(() => box.remove(), 5000);
+        box.className = `gameMessage${fixed ? ' gameMessageScreen' : ''}`;
+        box.setAttribute('role', 'status');
+        host.appendChild(box);
+        requestAnimationFrame(() => box.classList.add('isVisible'));
+        setTimeout(() => {
+          box.classList.remove('isVisible');
+          setTimeout(() => box.remove(), 200);
+        }, 5000);
       }
 
       function afterPaint(fn){
@@ -3843,10 +3859,10 @@ export function initGame(): void {
         setMuted(btnSurrender, aiThinking || !canPlay || gameOver);
 
         // hint - enabled during any in-game snapshot (playing or review), including rewound
-        setMuted(btnHint, aiThinking || !inGame || !atTip || history.length === 0 || turn !== 'play' || gameOver);
+        setMuted(btnHint, aiThinking || !inGame || history.length === 0 || turn !== 'play');
 
         // save - only enabled in review mode (after a game finished, before a new one starts)
-        setMuted(btnSave, appMode !== 'review');
+        setMuted(btnSave, !(appMode === 'review' && (gameOver || recite)));
 
         // load - only available from the main menu
         setMuted(btnLoad, appMode !== 'menu');
@@ -3910,7 +3926,7 @@ export function initGame(): void {
     btnHint?.addEventListener('click', showHint);
     btnSurrender?.addEventListener('click', () => {
       if (!confirmBox) return;
-      confirmBox.style.display = (confirmBox.style.display === 'none' || !confirmBox.style.display) ? 'block' : 'none';
+      setVisible(confirmBox, confirmBox.hidden);
     });
     btnBack?.addEventListener('click', reviewBack);
     btnForward?.addEventListener('click', reviewForward);
@@ -3945,8 +3961,8 @@ export function initGame(): void {
     }
 
     function saveGameRecord(){
-      // Guard: only in review mode
-      if (appMode !== 'review') return;
+      // Guard the invariant as well as muting the button in the UI.
+      if (appMode !== 'review' || (!gameOver && !recite)) return;
 
       // Prefer the built replay (exists in review), else fall back to history
       let frames = null;
@@ -4097,6 +4113,38 @@ export function initGame(): void {
       }).filter(Boolean);
     }
 
+    function validateReplayFrames(frames){
+      const normalised = normaliseFramesToStrings(frames);
+      if (!normalised.length) throw new Error('Replay contains no frames.');
+      return normalised.map((frame, frameIndex)=>{
+        let snap;
+        try { snap = JSON.parse(frame); } catch {
+          throw new Error(`Replay frame ${frameIndex + 1} is not valid JSON.`);
+        }
+        if (!snap || typeof snap !== 'object' || Array.isArray(snap)) {
+          throw new Error(`Replay frame ${frameIndex + 1} is not an object.`);
+        }
+        if (!Array.isArray(snap.board) || snap.board.length !== SIZE || snap.board.some((row)=>
+          !Array.isArray(row) || row.length !== SIZE || row.some((tile)=>!Number.isInteger(tile) || tile < EMPTY || tile > FROZEN_MOON)
+        )) {
+          throw new Error(`Replay frame ${frameIndex + 1} has an invalid board.`);
+        }
+        if (snap.turn !== 'setup' && snap.turn !== 'play') {
+          throw new Error(`Replay frame ${frameIndex + 1} has an invalid phase.`);
+        }
+        if (snap.toPlace !== 'sun' && snap.toPlace !== 'moon') {
+          throw new Error(`Replay frame ${frameIndex + 1} has an invalid setup side.`);
+        }
+        if (snap.current !== SUN && snap.current !== MOON) {
+          throw new Error(`Replay frame ${frameIndex + 1} has an invalid current player.`);
+        }
+        if (snap.movesLeft !== undefined && (!Number.isInteger(snap.movesLeft) || snap.movesLeft < 0)) {
+          throw new Error(`Replay frame ${frameIndex + 1} has invalid remaining actions.`);
+        }
+        return JSON.stringify(snap);
+      });
+    }
+
     function clearLog(){ if (elLog) elLog.innerHTML = ''; }
 
     // helpers for reconstructing setup move text from two board snapshots
@@ -4160,7 +4208,7 @@ export function initGame(): void {
               continue;
             }
             if (code===2 && prevCount===0){
-              log(`Moon placed their second Swan at ${tileAlg(r,c)}.`);
+              log(`Moon placed their first Swan at ${tileAlg(r,c)}.`);
               if (Array.isArray(snap.freezeNotes)){
                 for (const m of snap.freezeNotes){ if (m && typeof m === 'string') log(m); }
               }
@@ -4199,16 +4247,15 @@ export function initGame(): void {
     }
 
     function enterrecital(payload, fileName){
+      // Validate the complete timeline before mutating live game or UI state.
+      const frames = validateReplayFrames(payload?.replay || []);
+
       resetVeryHardSession();
       try { stopMasterLoop(); } catch {}
       try { timerStop?.(); } catch {}
 
-      // Build history/replay from payload
-      const frames = normaliseFramesToStrings(payload?.replay || []);
-      if (!frames.length){
-        showMessageCenteredOnScreen?.('Load failed - no replay frames found.');
-        return;
-      }
+      lastOutcomeShort = typeof payload?.outcome?.short === 'string' ? payload.outcome.short : null;
+      lastOutcomeDetailed = typeof payload?.outcome?.detailed === 'string' ? payload.outcome.detailed : null;
 
       // Ensure first frame has a predetermined default clock value for timed modes
       try {
@@ -4246,9 +4293,9 @@ export function initGame(): void {
       markActive?.(null);
       disableBoardInteraction(); // prevent actual moves/placements
 
-      // UI: hide start buttons and ensure the log is visible in replay mode
-      if (elStartMenu) elStartMenu.style.display = 'none';
-      if (elLog) elLog.style.display = 'block';
+      // UI: hide start buttons and ensure the history is visible in replay mode
+      setVisible(elStartMenu, false);
+      setVisible(elHistorySection, true);
 
       // Apply saved clock mode transiently and infer AI side BEFORE applying the first frame
       try {
@@ -4370,10 +4417,11 @@ export function initGame(): void {
       function goToTip() {
         // suppress intermediate SFX when walking forward
         suppressReviewSFX = true;
-        let guard = 0;
-        while (!isAtTip()) {
+        const maximumSteps = Array.isArray(replay) ? replay.length : 0;
+        for (let step = 0; step < maximumSteps && !isAtTip(); step++) {
+          const before = replayIdx;
           reviewForward();            // existing forward stepper
-          if (++guard > 512) break;   // safety guard for corrupted timelines
+          if (replayIdx === before) break;
         }
         suppressReviewSFX = false;
         forceReviewSFXOnce = true;
@@ -4496,14 +4544,14 @@ export function initGame(): void {
       if (!(t instanceof HTMLElement)) return;
 
       if (t.id === 'surrenderNo') {
-        if (confirmBox) confirmBox.style.display = 'none';
+        setVisible(confirmBox, false);
         e.stopPropagation();
         e.preventDefault();
         return;
       }
 
       if (t.id === 'surrenderYes') {
-        if (confirmBox) confirmBox.style.display = 'none';
+        setVisible(confirmBox, false);
         // call your existing surrender flow
         if (typeof onSurrender === 'function') onSurrender();
         e.stopPropagation();
@@ -4531,8 +4579,10 @@ export function initGame(): void {
 
     // initial page state menu visible, log hidden, render board & labels
     appMode = 'menu';
-    if (elStartMenu) elStartMenu.style.display = 'grid';
-    if (elLog) elLog.style.display = 'none';
+    setVisible(elStartMenu, true);
+    setVisible(elHistorySection, false);
+    resetClocksForNewGame();
+    applyClockVisibility();
     render();
     renderAxisLabels();
 }

@@ -469,105 +469,66 @@ def legal_push_moves(
     player: int,
 ):
     """
-    Yield all legal single-Swan push moves for `player`.
+    Yield ``(enemy_subset, direction)`` for every legal push.
 
-    Rule fragment:
-
-        "Push Swan(s)
-         Push an enemy Swan away from your own Swan.
-         The enemy Swan must be active and in an adjacent tile
-         (orthogonal or diagonal)."
-
-    Each yielded entry is:
-
-        ((my_r, my_c), (enemy_r, enemy_c), (dr, dc))
-
-    where (dr, dc) is the push direction from (my_r, my_c) through
-    (enemy_r, enemy_c). When the enemy Swan is pushed, all Stones
-    unique to that Swan move with it using the same rules as normal
-    Swan movement.
+    Any non-empty subset of active enemy Swans may be pushed in a common
+    direction. Every selected enemy Swan must be adjacent to at least one
+    active friendly Swan; the direction itself is unrestricted.
     """
     assert board.shape == (BOARD_SIZE, BOARD_SIZE)
 
     enemy_player = MOON if player == SUN else SUN
-
+    candidates: List[Tuple[int, int]] = []
     for r in range(BOARD_SIZE):
         for c in range(BOARD_SIZE):
-            if not is_active_swan(player, int(board[r, c])):
+            if not is_active_swan(enemy_player, int(board[r, c])):
                 continue
+            if any(
+                in_bounds(r + dr, c + dc)
+                and is_active_swan(player, int(board[r + dr, c + dc]))
+                for dr, dc in DIRS8
+            ):
+                candidates.append((r, c))
 
-            # Consider each adjacent tile for a potential enemy Swan.
-            for dr, dc in DIRS8:
-                er, ec = r + dr, c + dc
-                if not in_bounds(er, ec):
-                    continue
-
-                v = int(board[er, ec])
-                # Enemy Swan must be active (cannot push frozen Swans).
-                if not is_active_swan(enemy_player, v):
-                    continue
-
-                # Destination of the enemy Swan after the push.
-                tr, tc = er + dr, ec + dc
-                if not in_bounds(tr, tc):
-                    continue
-
-                # Check legality of moving the enemy Swan (and its Stones)
-                # from its own perspective, including collisions.
-                # IMPORTANT: pushed Swans are allowed to enter "silver shield"
-                # tiles, so we set apply_forbidden=False.
-                if _legal_move_subset_local(
-                    board,
-                    [(er, ec)],
-                    (dr, dc),
-                    enemy_player,
-                    apply_forbidden=False,
-                ) is None:
-                    continue
-
-                yield (r, c), (er, ec), (dr, dc)
+    for mask in range(1, 1 << len(candidates)):
+        subset = [candidates[i] for i in range(len(candidates)) if mask & (1 << i)]
+        for direction in DIRS8:
+            if simulate_push_subset(board, player, subset, direction) is not None:
+                yield subset, direction
 
 
-def simulate_push_move(
+def simulate_push_subset(
     board: np.ndarray,
     player: int,
-    my_pos: Tuple[int, int],
-    enemy_pos: Tuple[int, int],
+    subset: List[Tuple[int, int]],
+    direction: Tuple[int, int],
 ) -> Optional[np.ndarray]:
-    """
-    Apply a single-Swan push and return the new board.
-
-    The caller is expected to ensure that `(my_pos, enemy_pos, …)` is one
-    of the results of `legal_push_moves`. If the push is illegal, returns
-    ``None``.
-    """
-    (mr, mc) = my_pos
-    (er, ec) = enemy_pos
-
-    dr = er - mr
-    dc = ec - mc
-
-    if (dr, dc) not in DIRS8:
+    """Apply a subset push using the same movement rules as the shipped game."""
+    if not subset or direction not in DIRS8 or len(set(subset)) != len(subset):
         return None
 
     enemy_player = MOON if player == SUN else SUN
+    for r, c in subset:
+        if not in_bounds(r, c) or not is_active_swan(enemy_player, int(board[r, c])):
+            return None
+        if not any(
+            in_bounds(r + dr, c + dc)
+            and is_active_swan(player, int(board[r + dr, c + dc]))
+            for dr, dc in DIRS8
+        ):
+            return None
 
-    if not in_bounds(mr, mc) or not in_bounds(er, ec):
-        return None
-    if not is_active_swan(player, int(board[mr, mc])):
-        return None
-    if not is_active_swan(enemy_player, int(board[er, ec])):
-        return None
-
-    # Reuse group-move simulation from enemy's perspective: we are
-    # moving their Swan (and its Stones) while our Swan remains in place.
     return simulate_group_move(
         board,
-        [(er, ec)],
-        (dr, dc),
+        subset,
+        direction,
         enemy_player,
         apply_forbidden=False,
     )
+
+
+# Historical name retained for callers; pushes now carry a subset and direction.
+simulate_push_move = simulate_push_subset
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from action_space import ACTION_SIZE
+try:
+    from .action_space import ACTION_SIZE
+except ImportError:
+    from action_space import ACTION_SIZE
 
 NUM_ACTIONS = ACTION_SIZE
 
@@ -17,7 +20,7 @@ class LinithPVNet(nn.Module):
       - value:         [B, 1] in [-1, 1]
     """
 
-    def __init__(self, board_channels: int = 6, board_size: int = 10):
+    def __init__(self, board_channels: int = 8, board_size: int = 10):
         super().__init__()
         self.board_size = board_size
         self.board_channels = board_channels
@@ -70,8 +73,37 @@ class LinithPVNet(nn.Module):
 
         return policy_logits, v
 
+    def load_state_dict(self, state_dict, strict=True, assign=False):
+        """Load current or legacy 6-channel/752-action checkpoints safely."""
+        adapted = state_dict.copy()
+        current = super().state_dict()
+        for key in ("conv1.weight", "policy_fc.weight", "policy_fc.bias"):
+            source = adapted.get(key)
+            target = current.get(key)
+            if source is None or target is None or source.shape == target.shape:
+                continue
+            merged = target.clone()
+            if key == "conv1.weight" and source.ndim == target.ndim == 4:
+                bounds = tuple(min(a, b) for a, b in zip(source.shape, target.shape))
+                slices = tuple(slice(0, n) for n in bounds)
+                merged[slices] = source[slices]
+            elif key.startswith("policy_fc"):
+                # Placement/group indices 0..703 retained their exact meaning.
+                rows = min(704, source.shape[0], target.shape[0])
+                if source.ndim == 2:
+                    merged[:rows, :min(source.shape[1], target.shape[1])] = source[
+                        :rows, :min(source.shape[1], target.shape[1])
+                    ]
+                else:
+                    merged[:rows] = source[:rows]
+            adapted[key] = merged
+        try:
+            return super().load_state_dict(adapted, strict=strict, assign=assign)
+        except TypeError:
+            return super().load_state_dict(adapted, strict=strict)
+
     @staticmethod
-    def from_value_only(value_model_path: str, board_channels: int = 6, board_size: int = 10):
+    def from_value_only(value_model_path: str, board_channels: int = 8, board_size: int = 10):
         """
         Try to load weights from an older value-only model.
         Missing keys (policy head) will remain randomly initialised.

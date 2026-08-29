@@ -120,7 +120,7 @@ def main():
 
         # 1) Self-play to generate dataset
         sp_cmd = [
-            "python", "selfplaypv_cpp.py",
+            "python", "selfplaypv_cpp_gpu.py",
             "--model", current_model,
             "--games", str(args.games),
             "--sims", str(args.sims),
@@ -160,13 +160,14 @@ def main():
 
         # 3) Train from replay dataset to produce next model
         train_cmd = [
-            "python", "train_pv_selfplay.py",
+            "python", "train_pv_selfplay_gpu.py",
             "--base", current_model,
             "--data", data_for_training,
             "--out", out_model,
             "--epochs", str(args.epochs),
             "--batch-size", str(args.batch_size),
             "--lr", str(args.lr),
+            "--device", args.device,
         ]
         run(train_cmd)
 

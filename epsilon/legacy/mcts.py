@@ -36,7 +36,7 @@ class Node:
             q = 0.0
         else:
             N_sa = child.visit_count
-            q = child.q_value()
+            q = child.q_value() if child.to_move == self.to_move else -child.q_value()
 
         p = 0.0
         if self.legal_actions is not None and action_idx in self.legal_actions:
@@ -65,6 +65,7 @@ def clone_env(env: LinithEnv) -> LinithEnv:
         done=s.done,
         winner=s.winner,
         move_count=s.move_count,
+        max_moves=s.max_moves,
     )
     return new_env
 
@@ -138,7 +139,7 @@ class MCTS:
                 break
 
             # step environment
-            action = decode_action(idx, env)
+            action = decode_action(best_action_idx, env)
             obs, reward, done, info = env.step(action)
 
             # move to child node (create if needed)
@@ -149,6 +150,7 @@ class MCTS:
                     prior=node.children.get(best_action_idx, Node(to_move=node.to_move)).prior,
                 )
                 node.children[best_action_idx] = child
+            child.to_move = env.state.current_player  # type: ignore[union-attr]
 
             node = child
             search_path.append((node, best_action_idx))
@@ -157,7 +159,7 @@ class MCTS:
         if env.state.done:  # type: ignore[union-attr]
             # Terminal: value from the perspective of node.to_move
             winner = env.state.winner  # type: ignore[union-attr]
-            if winner is None:
+            if winner is None or winner == 0:
                 value = 0.0
             else:
                 value = 1.0 if winner == node.to_move else -1.0
@@ -174,6 +176,7 @@ class MCTS:
         """
         if env.state is None:
             raise RuntimeError("Env not reset before expand_node")
+        node.to_move = env.state.current_player
 
         # legal moves at this state
         legal_idxs = legal_action_indices(env)
@@ -222,11 +225,10 @@ class MCTS:
     def _backpropagate(self, path: List[Tuple[Node, Optional[int]]], value: float) -> None:
         """
         Backup value along the path. The value is from the perspective of the
-        *last node’s to_move*, and alternates sign up the path.
+        *last node's to_move*. Actions do not necessarily alternate players.
         """
-        v = value
+        leaf_player = path[-1][0].to_move
         # walk from leaf to root
         for node, _ in reversed(path):
             node.visit_count += 1
-            node.value_sum += v
-            v = -v  # flip perspective each ply
+            node.value_sum += value if node.to_move == leaf_player else -value

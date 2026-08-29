@@ -30,7 +30,7 @@ available space.
 
 Swans are defeated by being completely encircled and frozen.
 
-This repository contains Linith 0.232, its browser and native builds, and
+This repository contains Linith 0.24, its browser and native builds, and
 **Epsilon**: the Linith-specific AlphaZero-style self-play and neural-network
 training system.
 
@@ -71,6 +71,11 @@ The complete rules are in [`rules.txt`](rules.txt).
 - Doctrinal, Constrictor, Rupture, Blizzard, Librarian, Swarm, and Fortress AI styles
 
 AI style notes are available in [`aipersons.txt`](aipersons.txt).
+
+Difficulty and personality are independent: difficulty controls search breadth,
+depth, and coordination, while personality is a bounded preference among
+strategically close actions. Doctrinal is the zero-bias canonical evaluator;
+the other six profiles cannot override forced wins or unique defenses.
 
 Very Hard is a separate, bounded iterative-deepening search built on the
 corrected pure rule model kept in parity with live play. Its classical
@@ -175,8 +180,17 @@ available as `npm run ai:teacher`, `npm run ai:tune`, and `npm run ai:book`;
 tuned weights or book entries must pass held-out/agreement checks before they
 are copied into shipping code.
 
-The frozen release bundle (`602974…628c9` WASM, `7ea553…74dcc` book) scored
-89.8% against Hard over 1,000 games / 500 color-swapped pairs under a fixed
+The current personality-aware bundle is `b7ebe9…512d79` WASM with the
+independently regenerated `a14357…37aec3` opening book. Its matched-state
+personality audit uses 24 identical positions per style at a 10,000-node
+budget, requires completed search depth and legal actions, and verifies that
+every named profile changes at least one decision from Doctrinal. Run it with
+`npm run audit:personalities`.
+
+The following strength results apply to the earlier frozen `602974…628c9`
+WASM and `7ea553…74dcc` book; they are retained as historical release evidence
+and are not attributed to the current personality-aware artifact. That bundle
+scored 89.8% against Hard over 1,000 games / 500 color-swapped pairs under a fixed
 10,000-node qualification: 896 wins, 99 losses, 4 terminal draws, and 1
 repetition-unresolved game. The distribution-free one-sided 95% lower bound
 was 84.33%; both colours and all seven Very Hard personalities were positive,

@@ -121,7 +121,7 @@ def play_hard_vs_hard_game(
 
     if len(states) == 0:
         return (
-            np.zeros((0, 6, 10, 10), dtype=np.float32),
+            np.zeros((0, 8, 10, 10), dtype=np.float32),
             np.zeros((0, ACTION_SIZE), dtype=np.float32),
             np.zeros((0,), dtype=np.float32),
             winner,
