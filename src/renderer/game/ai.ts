@@ -694,7 +694,8 @@ export function linithAI(board, current, difficulty = 'hard') {
       const myTotalSwans = (()=>{let n=0; for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){ const v=get(board,r,c); if(samePlayerSwan(current,v)) n++; } return n;})();
 
       // stones - strict early rule, only advancing, locality, and cap
-      const allStones = shuffled( legalStonePlacements(board, current)).filter(([r,c]) => inLocality(r,c));
+      const legalStones = shuffled(legalStonePlacements(board, current));
+      const allStones = legalStones.filter(([r,c]) => inLocality(r,c));
       const advancing = [];
       for (const [r,c] of allStones){
         if (myTotalSwans < 6 && !decisiveStone(board, r, c, current)) continue;
@@ -764,7 +765,7 @@ export function linithAI(board, current, difficulty = 'hard') {
             if (b2) return { type:'move', dir, swans:[{r,c}], score:0 };
           }
         }
-        if (allStones.length){ const [r,c]=allStones[0]; return { type:'stone', r, c, score:0 }; }
+        if (legalStones.length){ const [r,c]=legalStones[0]; return { type:'stone', r, c, score:0 }; }
         return null;
       }
 

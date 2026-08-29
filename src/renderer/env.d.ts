@@ -1,5 +1,15 @@
 declare const __APP_VERSION__: string;
 
+declare module "*?worker&inline" {
+  const InlineWorker: new () => Worker;
+  export default InlineWorker;
+}
+
+declare module "*?url&inline" {
+  const dataUrl: string;
+  export default dataUrl;
+}
+
 interface LinithSoundApi {
   getVolume(): number;
   setVolume(value: number): void;

@@ -67,10 +67,28 @@ The complete rules are in [`rules.txt`](rules.txt).
 
 - Local two-player
 - AI plays Sun or Moon
-- Easy, Medium, and Hard difficulty
+- Easy, Medium, Hard, and Very Hard difficulties
 - Doctrinal, Constrictor, Rupture, Blizzard, Librarian, Swarm, and Fortress AI styles
 
 AI style notes are available in [`aipersons.txt`](aipersons.txt).
+
+Very Hard is a separate, bounded iterative-deepening search built on the
+corrected pure rule model kept in parity with live play. Its classical
+alpha-beta/PVS engine uses completed-turn depth, tactical extensions,
+transposition and played-position history, exact small-endgame extensions, and
+a compact independently verified opening book. It understands scheduled
+two-action turns and freeze-bonus continuations, runs as a 20 KB WebAssembly
+kernel outside the renderer, and falls back to Hard only after a genuine
+worker/null/illegal-result failure. A legal shallow result is never replaced by
+Hard. Easy, Medium, and Hard retain their frozen corrected compatibility
+behavior: the captured unaffected decision corpus remains exact, while a
+global legal-Stone fallback prevents the inherited selector from returning no
+action when its local candidate filters are exhausted.
+
+Very Hard has no neural-network or Epsilon runtime dependency. The historical
+Epsilon project remains available for research, but is not used to train or
+ship this difficulty. The full standalone build remains about 3 MB, far below
+the 4 GB product limit.
 
 ## Features
 
@@ -125,6 +143,61 @@ Create a checked production renderer with:
 ```powershell
 npm run build
 ```
+
+Build and verify the exact native artifact used by the browser worker with:
+
+```powershell
+npm run build:very-hard-native
+npm run verify:very-hard-native
+```
+
+Run a side-swapped arena against Hard with:
+
+```powershell
+npm run arena:very-hard
+```
+
+The harness accepts `--node-budget`, `--budget-ms`, `--depth`, `--games`,
+`--max-actions`, and style overrides. It reports legality, artifact identity,
+search throughput and depth, stop reasons, unresolved causes, and arena
+outcomes as JSON. Games are paired on the exact same opening and style matchup
+with Very Hard playing each colour. Unresolved and operational outcomes score
+zero in the pessimistic release metric. For a release-strength gate, use the
+ladder runner with a suitably large even sample:
+
+```powershell
+npm run ladder:very-hard -- --opponents=hard --games=1000 --workers=4
+```
+
+Resume validation rejects configuration drift, malformed color pairs, mixed
+WASM hashes, and stale opening-book hashes. The deterministic offline tools are
+available as `npm run ai:teacher`, `npm run ai:tune`, and `npm run ai:book`;
+tuned weights or book entries must pass held-out/agreement checks before they
+are copied into shipping code.
+
+The frozen release bundle (`602974…628c9` WASM, `7ea553…74dcc` book) scored
+89.8% against Hard over 1,000 games / 500 color-swapped pairs under a fixed
+10,000-node qualification: 896 wins, 99 losses, 4 terminal draws, and 1
+repetition-unresolved game. The distribution-free one-sided 95% lower bound
+was 84.33%; both colours and all seven Very Hard personalities were positive,
+with zero illegal actions, crashes, artifact mismatches, or Hard fallbacks.
+This bulk fixed-work run is a strength test, not a latency claim. A separate
+32-game shipping-clock screen averaged 550 ms per fresh search and scored
+25–7 against Hard with no unresolved or operational outcomes.
+
+The same frozen bundle scored 196–4 against Medium and 200–0 against Easy in
+separate 200-game / 100 color-swapped-pair qualifications. Their
+distribution-free one-sided 95% lower bounds were 85.76% and 87.76%,
+respectively. All 400 games resolved normally, with zero invalid actions,
+crashes, fallbacks, repetitions, action-limit outcomes, artifact mismatches,
+or pair-integrity failures.
+
+The compact release evidence is checked in as the
+[`32-game shipping-clock screen`](native/very-hard/final-hard-32-book.json),
+[`1,000-game Hard qualification`](native/very-hard/final-hard-1000.json), and
+[`400-game Medium/Easy qualification`](native/very-hard/final-medium-easy-400-corrected.json).
+Raw game shards, diagnostic traces, and intermediate regression reports are
+local generated output and are intentionally ignored by Git.
 
 ## Builds
 

@@ -15,6 +15,7 @@ import {
   actionKey,
   generateLegalActions,
   isLegalSwanPlacement,
+  outcomeAfterAction,
   simulatePush,
   simulateSwanMove
 } from "../src/renderer/game/rulesEngine";
@@ -74,6 +75,39 @@ test("simultaneous final encirclement resolves as a draw", () => {
   assert.equal(result.outcome, "draw");
   assert.equal(result.freeze.sealedSun, 1);
   assert.equal(result.freeze.sealedMoon, 1);
+});
+
+test("live-executor saturation declares a full occupied board a draw", () => {
+  const board = Array.from({ length: 10 }, () => Array(10).fill(STONE) as Board[number]);
+  board[0][0] = SWAN_SUN;
+  board[9][9] = SWAN_MOON;
+  const noFreeze = {
+    nb: board,
+    frozeSun: 0,
+    frozeMoon: 0,
+    sealedSun: 0,
+    sealedMoon: 0,
+    frozenGroups: []
+  };
+  assert.equal(outcomeAfterAction(board, noFreeze), "draw");
+
+  board[5][5] = EMPTY;
+  assert.equal(outcomeAfterAction(board, { ...noFreeze, nb: board }), null);
+});
+
+test("live-executor active-Swan safety outcome is preserved", () => {
+  const board = emptyBoard();
+  board[5][5] = SWAN_SUN;
+  board[6][6] = FROZEN_MOON;
+  const noFreeze = {
+    nb: board,
+    frozeSun: 0,
+    frozeMoon: 0,
+    sealedSun: 0,
+    sealedMoon: 0,
+    frozenGroups: []
+  };
+  assert.equal(outcomeAfterAction(board, noFreeze), "sun");
 });
 
 test("every generated action applies without mutating its input", () => {

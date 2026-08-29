@@ -349,6 +349,32 @@ export function outcomeFromFreeze(freeze: FreezeResult): GameOutcome {
   return null;
 }
 
+/**
+ * Resolve the live executor's non-clock terminal conditions in their exact
+ * order.  The sealed counters are authoritative for the action that just
+ * completed; the active-Swan checks mirror the executor's defensive fallback,
+ * and a completely occupied board is a draw while both sides remain alive.
+ *
+ * Keeping this separate from action generation matters: a full board can still
+ * contain mechanically movable Swans, but the shipped game ends the position
+ * before another action is offered.
+ */
+export function outcomeAfterAction(board: Board, freeze: FreezeResult): GameOutcome {
+  const sealedOutcome = outcomeFromFreeze(freeze);
+  if (sealedOutcome) return sealedOutcome;
+
+  const activeSun = countActiveSwans(board, SUN);
+  const activeMoon = countActiveSwans(board, MOON);
+  if (activeSun === 0 && activeMoon === 0) return "draw";
+  if (activeMoon === 0) return "sun";
+  if (activeSun === 0) return "moon";
+
+  for (const row of board) {
+    for (const tile of row) if (tile === EMPTY) return null;
+  }
+  return "draw";
+}
+
 export function nextTurnAfterFreeze(
   board: Board,
   current: Player,
@@ -369,7 +395,7 @@ export function applyAction(state: SearchState, action: LinithAction): AppliedAc
   const moved = applyActionToBoard(state.board, state.current, action);
   if (!moved) return null;
   const freeze = computeFreezesOn(moved);
-  const outcome = outcomeFromFreeze(freeze);
+  const outcome = outcomeAfterAction(freeze.nb, freeze);
   const turn = nextTurnAfterFreeze(freeze.nb, state.current, state.movesLeft, freeze);
   return {
     board: freeze.nb,

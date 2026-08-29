@@ -97,6 +97,32 @@ test("corrected Easy, Medium, and Hard decisions are frozen on a Stone-and-freez
   }
 });
 
+test("Easy and Medium keep a legal global Stone fallback when locality has no candidates", () => {
+  const originalWindow = globalThis.window;
+  const originalRandom = Math.random;
+  globalThis.window = { linithGetStyle: () => "doctrinal" } as Window & typeof globalThis;
+  Math.random = () => 0.9;
+  try {
+    for (const difficulty of ["easy", "medium"] as const) {
+      const action = linithAI(localityExhaustionFixture, 2, difficulty);
+      assert.ok(action, `${difficulty} must not return null while a Stone placement is legal`);
+      assert.equal(action.type, "stone");
+      assert.ok(applyActionToBoard(localityExhaustionFixture, 2, action), `${difficulty} fallback must be legal`);
+    }
+  } finally {
+    Math.random = originalRandom;
+    globalThis.window = originalWindow;
+  }
+});
+
+const localityExhaustionFixture: Board = [
+  [3,3,3,0,3,5,3,0,0,0], [3,5,3,0,3,3,3,3,3,3],
+  [3,3,3,0,0,0,0,3,5,3], [3,5,3,0,0,1,0,3,3,3],
+  [3,5,3,3,1,3,0,0,0,0], [3,3,3,3,3,3,3,1,3,0],
+  [3,3,3,0,0,0,3,0,0,0], [3,2,0,0,0,3,3,0,3,0],
+  [3,3,3,3,0,3,1,0,1,0], [0,3,4,3,0,3,0,0,0,3]
+];
+
 const correctedFixture: Board = [
   [0,0,0,0,0,0,0,0,0,0], [0,0,0,1,0,0,0,0,2,0],
   [0,0,0,0,0,1,0,0,0,0], [0,1,3,0,0,0,0,0,0,0],

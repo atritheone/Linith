@@ -1,0 +1,913 @@
+{
+  "kind": "linith-ai-ladder",
+  "formatVersion": 1,
+  "confidence": {
+    "alpha": 0.05,
+    "method": "distribution-free Hoeffding lower bound over color-swapped opening pairs",
+    "unresolvedPolicy": "repetition/action-limit/invalid/crash score zero"
+  },
+  "games": 400,
+  "pairs": 200,
+  "veryHardArtifacts": [
+    {
+      "kind": "wasm",
+      "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+      "bytes": 20194,
+      "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+      "openingBookBytes": 5209
+    }
+  ],
+  "artifactIntegrityFailures": 0,
+  "search": {
+    "searches": 11701,
+    "bookHits": 104,
+    "continuationHits": 7962,
+    "nodes": 114025579,
+    "engineElapsedMs": 21601022.09,
+    "elapsedMs": 21607489.000000007,
+    "completedDepth": 25484,
+    "fallbackSearches": 0,
+    "stops": {
+      "node-budget": 11287,
+      "max-depth": 414
+    },
+    "averageCompletedDepth": 2.177933509956414,
+    "averageEngineElapsedMs": 1846.0834193658661,
+    "averageSelectorElapsedMs": 1846.6360994786776,
+    "selectorOverheadMs": 0.5526801128115203,
+    "nodesPerSecond": 5279,
+    "fallbackRate": 0,
+    "continuationShare": 0.40492295173676446
+  },
+  "opponents": [
+    {
+      "opponent": "medium",
+      "games": 200,
+      "pairs": 100,
+      "pairIntegrityFailures": 0,
+      "classifications": {
+        "win": 196,
+        "loss": 4,
+        "terminal-draw": 0,
+        "repetition-unresolved": 0,
+        "action-limit-unresolved": 0,
+        "invalid": 0,
+        "crash": 0
+      },
+      "wins": 196,
+      "losses": 4,
+      "terminalDraws": 0,
+      "unresolved": 0,
+      "unresolvedRate": 0,
+      "operationalFailures": 0,
+      "pessimisticScoreRate": 0.98,
+      "pairMeanScore": 0.98,
+      "pairHoeffdingOneSided95Lower": 0.8576126584659591,
+      "pairScoreCounts": {
+        "1.00": 96,
+        "0.50": 4
+      },
+      "byColor": [
+        {
+          "label": "sun",
+          "games": 100,
+          "pessimisticScoreRate": 0.96
+        },
+        {
+          "label": "moon",
+          "games": 100,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byOpeningSource": [
+        {
+          "label": "curated",
+          "games": 104,
+          "pessimisticScoreRate": 0.9807692307692307
+        },
+        {
+          "label": "generated",
+          "games": 96,
+          "pessimisticScoreRate": 0.9791666666666666
+        }
+      ],
+      "byChallengerStyle": [
+        {
+          "label": "doctrinal",
+          "games": 92,
+          "pessimisticScoreRate": 0.9891304347826086
+        },
+        {
+          "label": "constrictor",
+          "games": 84,
+          "pessimisticScoreRate": 0.9642857142857143
+        },
+        {
+          "label": "rupture",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byOpponentStyle": [
+        {
+          "label": "doctrinal",
+          "games": 38,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor",
+          "games": 38,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture",
+          "games": 26,
+          "pessimisticScoreRate": 0.9230769230769231
+        },
+        {
+          "label": "blizzard",
+          "games": 26,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "librarian",
+          "games": 24,
+          "pessimisticScoreRate": 0.9166666666666666
+        },
+        {
+          "label": "swarm",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "fortress",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byStyleMatchup": [
+        {
+          "label": "doctrinal vs doctrinal",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs constrictor",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs rupture",
+          "games": 14,
+          "pessimisticScoreRate": 0.9285714285714286
+        },
+        {
+          "label": "doctrinal vs blizzard",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs librarian",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs swarm",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs fortress",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs doctrinal",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs constrictor",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs rupture",
+          "games": 12,
+          "pessimisticScoreRate": 0.9166666666666666
+        },
+        {
+          "label": "constrictor vs blizzard",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs librarian",
+          "games": 12,
+          "pessimisticScoreRate": 0.8333333333333334
+        },
+        {
+          "label": "constrictor vs swarm",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs fortress",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture vs doctrinal",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture vs constrictor",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "search": {
+        "searches": 7431,
+        "bookHits": 52,
+        "continuationHits": 4860,
+        "nodes": 72748870,
+        "engineElapsedMs": 14586154.96,
+        "elapsedMs": 14590440.9,
+        "completedDepth": 17311,
+        "fallbackSearches": 0,
+        "stops": {
+          "node-budget": 7217,
+          "max-depth": 214
+        },
+        "averageCompletedDepth": 2.3295653344099043,
+        "averageEngineElapsedMs": 1962.8791495088146,
+        "averageSelectorElapsedMs": 1963.455914412596,
+        "selectorOverheadMs": 0.5767649037813859,
+        "nodesPerSecond": 4988,
+        "fallbackRate": 0,
+        "continuationShare": 0.39541127654381253
+      }
+    },
+    {
+      "opponent": "easy",
+      "games": 200,
+      "pairs": 100,
+      "pairIntegrityFailures": 0,
+      "classifications": {
+        "win": 200,
+        "loss": 0,
+        "terminal-draw": 0,
+        "repetition-unresolved": 0,
+        "action-limit-unresolved": 0,
+        "invalid": 0,
+        "crash": 0
+      },
+      "wins": 200,
+      "losses": 0,
+      "terminalDraws": 0,
+      "unresolved": 0,
+      "unresolvedRate": 0,
+      "operationalFailures": 0,
+      "pessimisticScoreRate": 1,
+      "pairMeanScore": 1,
+      "pairHoeffdingOneSided95Lower": 0.8776126584659592,
+      "pairScoreCounts": {
+        "1.00": 100
+      },
+      "byColor": [
+        {
+          "label": "sun",
+          "games": 100,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "moon",
+          "games": 100,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byOpeningSource": [
+        {
+          "label": "curated",
+          "games": 104,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "generated",
+          "games": 96,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byChallengerStyle": [
+        {
+          "label": "doctrinal",
+          "games": 92,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor",
+          "games": 84,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byOpponentStyle": [
+        {
+          "label": "doctrinal",
+          "games": 38,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor",
+          "games": 38,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture",
+          "games": 26,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "blizzard",
+          "games": 26,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "librarian",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "swarm",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "fortress",
+          "games": 24,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "byStyleMatchup": [
+        {
+          "label": "doctrinal vs doctrinal",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs constrictor",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs rupture",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs blizzard",
+          "games": 14,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs librarian",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs swarm",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs fortress",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs doctrinal",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs constrictor",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs rupture",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs blizzard",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs librarian",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs swarm",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "constrictor vs fortress",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture vs doctrinal",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "rupture vs constrictor",
+          "games": 12,
+          "pessimisticScoreRate": 1
+        }
+      ],
+      "search": {
+        "searches": 4270,
+        "bookHits": 52,
+        "continuationHits": 3102,
+        "nodes": 41276709,
+        "engineElapsedMs": 7014867.13,
+        "elapsedMs": 7017048.1,
+        "completedDepth": 8173,
+        "fallbackSearches": 0,
+        "stops": {
+          "node-budget": 4070,
+          "max-depth": 200
+        },
+        "averageCompletedDepth": 1.9140515222482435,
+        "averageEngineElapsedMs": 1642.8260257611241,
+        "averageSelectorElapsedMs": 1643.3367915690865,
+        "selectorOverheadMs": 0.5107658079624682,
+        "nodesPerSecond": 5884,
+        "fallbackRate": 0,
+        "continuationShare": 0.4207813347802496
+      }
+    }
+  ],
+  "shards": [
+    {
+      "shardId": "medium-001",
+      "manifestId": "fnv1a32-691bbcfa",
+      "opponent": "medium",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-002",
+      "manifestId": "fnv1a32-39cb2da4",
+      "opponent": "medium",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-003",
+      "manifestId": "fnv1a32-7138bbda",
+      "opponent": "medium",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-004",
+      "manifestId": "fnv1a32-7df06390",
+      "opponent": "medium",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-005",
+      "manifestId": "fnv1a32-927602c7",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-006",
+      "manifestId": "fnv1a32-8c07e9ff",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-007",
+      "manifestId": "fnv1a32-1899479c",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-008",
+      "manifestId": "fnv1a32-72f0fd87",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-009",
+      "manifestId": "fnv1a32-af61023c",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-010",
+      "manifestId": "fnv1a32-01fda14e",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-011",
+      "manifestId": "fnv1a32-a9c3b2dc",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-012",
+      "manifestId": "fnv1a32-d1c88f96",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-013",
+      "manifestId": "fnv1a32-0b7dceae",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-014",
+      "manifestId": "fnv1a32-a64ee700",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-015",
+      "manifestId": "fnv1a32-ed73c5be",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "medium-016",
+      "manifestId": "fnv1a32-2936bad8",
+      "opponent": "medium",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-001",
+      "manifestId": "fnv1a32-aedae903",
+      "opponent": "easy",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-002",
+      "manifestId": "fnv1a32-9e73a166",
+      "opponent": "easy",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-003",
+      "manifestId": "fnv1a32-cdf8a432",
+      "opponent": "easy",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-004",
+      "manifestId": "fnv1a32-430aef88",
+      "opponent": "easy",
+      "games": 14,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-005",
+      "manifestId": "fnv1a32-39287959",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-006",
+      "manifestId": "fnv1a32-67993517",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-007",
+      "manifestId": "fnv1a32-73262885",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-008",
+      "manifestId": "fnv1a32-891cd87a",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-009",
+      "manifestId": "fnv1a32-6833388e",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-010",
+      "manifestId": "fnv1a32-564ab4c9",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-011",
+      "manifestId": "fnv1a32-c9dd2fa2",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-012",
+      "manifestId": "fnv1a32-78bb526d",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-013",
+      "manifestId": "fnv1a32-659c0e93",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-014",
+      "manifestId": "fnv1a32-20aa0d35",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-015",
+      "manifestId": "fnv1a32-030d1aae",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "easy-016",
+      "manifestId": "fnv1a32-302bb1e2",
+      "opponent": "easy",
+      "games": 12,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    }
+  ],
+  "config": {
+    "seed": 49979687,
+    "opponents": [
+      "medium",
+      "easy"
+    ],
+    "gamesPerOpponent": 200,
+    "shardsPerOpponent": 16,
+    "workers": 16,
+    "output": "native/very-hard/final-medium-easy-400-corrected.json",
+    "shardDirectory": "native/very-hard/final-medium-easy-400-corrected-shards",
+    "maxActions": 400,
+    "repetition": 3,
+    "openingMode": "mixed",
+    "openingCount": 10,
+    "openingPlies": 10,
+    "timing": "fixed",
+    "platform": "desktop",
+    "budgetMs": 60000,
+    "nodeBudget": 10000,
+    "depth": 6,
+    "engine": "native",
+    "floor": "never",
+    "allStyles": true,
+    "challengerStyles": null,
+    "opponentStyles": null,
+    "styleOffset": 0,
+    "gates": false,
+    "maxUnresolvedRate": 0.005,
+    "maxOperationalFailures": 0,
+    "minSubgroupScore": 0.5,
+    "searchTrace": false,
+    "resume": false
+  }
+}

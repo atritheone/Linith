@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f0f12" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; base-uri 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' data: ws:" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; base-uri 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; script-src 'self' 'unsafe-inline'; worker-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' data: ws:" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="stylesheet" href="./styles.css" />
     <title>Linith</title>
@@ -37,7 +37,7 @@
           </div>
 
           <!-- turn pill -->
-          <div id="turnInfo" class="row">
+          <div id="turnInfo" class="row" aria-live="polite" aria-atomic="true">
             <span id="turnPill"></span>
           </div>
 
@@ -107,6 +107,7 @@
                   <option value="easy">Easy</option>
                   <option value="medium" selected>Medium</option>
                   <option value="hard">Hard</option>
+                  <option value="very_hard">Very Hard</option>
                 </select>
               </div>
 

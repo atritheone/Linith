@@ -30,6 +30,19 @@ if (externalReferences.length > 0) {
   throw new Error(`Standalone build still contains external assets: ${externalReferences.join(", ")}`);
 }
 
+// Vite can hide worker/Wasm URLs inside an inlined JavaScript string. Those
+// are just as external as an HTML src attribute and make file:// standalone
+// builds silently fall back to a weaker engine.
+const hiddenBuildAssets = [
+  ...html.matchAll(/\blinith-core-[A-Za-z0-9_-]+\.wasm\b/g),
+  ...html.matchAll(/["'`]\/?assets\/[^"'`]+["'`]/g)
+].map((match) => match[0]);
+if (hiddenBuildAssets.length > 0) {
+  throw new Error(
+    `Standalone build still contains JavaScript-referenced assets: ${[...new Set(hiddenBuildAssets)].join(", ")}`
+  );
+}
+
 await writeFile(outputPath, html, "utf8");
 console.log(`Standalone file written to ${outputPath}`);
 

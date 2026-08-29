@@ -72,6 +72,27 @@ node_modules/
 *.dmg
 *.rar
 
+# Very Hard AI generated analysis and qualification output. Keep the compact
+# release evidence and opening-book provenance explicitly listed below.
+/native/very-hard/build/
+/native/very-hard/*-shards/
+/native/very-hard/*-reports/
+/native/very-hard/stage2-all-pairs/
+/native/very-hard/stage2-failures/
+/native/very-hard/stage4-residual-manifests/
+/native/very-hard/*.json
+!/native/very-hard/asconfig.json
+!/native/very-hard/independent-book-openings.manifest.json
+!/native/very-hard/verified-opening-book.json
+!/native/very-hard/final-hard-32-book.json
+!/native/very-hard/final-hard-1000.json
+!/native/very-hard/final-medium-easy-400-corrected.json
+
+# AssemblyScript emits these optional bindings beside the shipping Wasm. The
+# application uses its typed native/core.ts adapter instead.
+/src/renderer/game/veryHard/native/linith-core.js
+/src/renderer/game/veryHard/native/linith-core.d.ts
+
 # Retired platform/source trees may still contain local historical builds.
 # The shared root build and platforms/android-wrapper replace these paths.
 /android/

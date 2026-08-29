@@ -1,0 +1,256 @@
+{
+  "kind": "linith-ai-ladder",
+  "formatVersion": 1,
+  "confidence": {
+    "alpha": 0.05,
+    "method": "distribution-free Hoeffding lower bound over color-swapped opening pairs",
+    "unresolvedPolicy": "repetition/action-limit/invalid/crash score zero"
+  },
+  "games": 32,
+  "pairs": 16,
+  "veryHardArtifacts": [
+    {
+      "kind": "wasm",
+      "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+      "bytes": 20194,
+      "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+      "openingBookBytes": 5209
+    }
+  ],
+  "artifactIntegrityFailures": 0,
+  "search": {
+    "searches": 1272,
+    "bookHits": 8,
+    "continuationHits": 663,
+    "nodes": 16517528,
+    "engineElapsedMs": 699747.39,
+    "elapsedMs": 700208.22,
+    "completedDepth": 2843,
+    "fallbackSearches": 0,
+    "stops": {
+      "deadline": 1234,
+      "max-depth": 38
+    },
+    "averageCompletedDepth": 2.235062893081761,
+    "averageEngineElapsedMs": 550.1158726415094,
+    "averageSelectorElapsedMs": 550.4781603773584,
+    "selectorOverheadMs": 0.36228773584902363,
+    "nodesPerSecond": 23605,
+    "fallbackRate": 0,
+    "continuationShare": 0.3426356589147287
+  },
+  "opponents": [
+    {
+      "opponent": "hard",
+      "games": 32,
+      "pairs": 16,
+      "pairIntegrityFailures": 0,
+      "classifications": {
+        "win": 25,
+        "loss": 7,
+        "terminal-draw": 0,
+        "repetition-unresolved": 0,
+        "action-limit-unresolved": 0,
+        "invalid": 0,
+        "crash": 0
+      },
+      "wins": 25,
+      "losses": 7,
+      "terminalDraws": 0,
+      "unresolved": 0,
+      "unresolvedRate": 0,
+      "operationalFailures": 0,
+      "pessimisticScoreRate": 0.78125,
+      "pairMeanScore": 0.78125,
+      "pairHoeffdingOneSided95Lower": 0.47528164616489793,
+      "pairScoreCounts": {
+        "0.00": 1,
+        "0.50": 5,
+        "1.00": 10
+      },
+      "byColor": [
+        {
+          "label": "sun",
+          "games": 16,
+          "pessimisticScoreRate": 0.75
+        },
+        {
+          "label": "moon",
+          "games": 16,
+          "pessimisticScoreRate": 0.8125
+        }
+      ],
+      "byOpeningSource": [
+        {
+          "label": "curated",
+          "games": 16,
+          "pessimisticScoreRate": 0.6875
+        },
+        {
+          "label": "generated",
+          "games": 16,
+          "pessimisticScoreRate": 0.875
+        }
+      ],
+      "byChallengerStyle": [
+        {
+          "label": "doctrinal",
+          "games": 32,
+          "pessimisticScoreRate": 0.78125
+        }
+      ],
+      "byOpponentStyle": [
+        {
+          "label": "doctrinal",
+          "games": 8,
+          "pessimisticScoreRate": 0.5
+        },
+        {
+          "label": "constrictor",
+          "games": 8,
+          "pessimisticScoreRate": 0.875
+        },
+        {
+          "label": "rupture",
+          "games": 8,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "blizzard",
+          "games": 8,
+          "pessimisticScoreRate": 0.75
+        }
+      ],
+      "byStyleMatchup": [
+        {
+          "label": "doctrinal vs doctrinal",
+          "games": 8,
+          "pessimisticScoreRate": 0.5
+        },
+        {
+          "label": "doctrinal vs constrictor",
+          "games": 8,
+          "pessimisticScoreRate": 0.875
+        },
+        {
+          "label": "doctrinal vs rupture",
+          "games": 8,
+          "pessimisticScoreRate": 1
+        },
+        {
+          "label": "doctrinal vs blizzard",
+          "games": 8,
+          "pessimisticScoreRate": 0.75
+        }
+      ],
+      "search": {
+        "searches": 1272,
+        "bookHits": 8,
+        "continuationHits": 663,
+        "nodes": 16517528,
+        "engineElapsedMs": 699747.39,
+        "elapsedMs": 700208.22,
+        "completedDepth": 2843,
+        "fallbackSearches": 0,
+        "stops": {
+          "deadline": 1234,
+          "max-depth": 38
+        },
+        "averageCompletedDepth": 2.235062893081761,
+        "averageEngineElapsedMs": 550.1158726415094,
+        "averageSelectorElapsedMs": 550.4781603773584,
+        "selectorOverheadMs": 0.36228773584902363,
+        "nodesPerSecond": 23605,
+        "fallbackRate": 0,
+        "continuationShare": 0.3426356589147287
+      }
+    }
+  ],
+  "shards": [
+    {
+      "shardId": "hard-001",
+      "manifestId": "fnv1a32-6a79595f",
+      "opponent": "hard",
+      "games": 8,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "hard-002",
+      "manifestId": "fnv1a32-d397e4af",
+      "opponent": "hard",
+      "games": 8,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "hard-003",
+      "manifestId": "fnv1a32-362a60c0",
+      "opponent": "hard",
+      "games": 8,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    },
+    {
+      "shardId": "hard-004",
+      "manifestId": "fnv1a32-5ee6ec05",
+      "opponent": "hard",
+      "games": 8,
+      "veryHardArtifact": {
+        "kind": "wasm",
+        "sha256": "6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+        "bytes": 20194,
+        "openingBookSha256": "7ea55376f12c6cb18743d4aa7948501abafbf9083b72ba749ab35577a4874dcc",
+        "openingBookBytes": 5209
+      }
+    }
+  ],
+  "config": {
+    "seed": 14784652,
+    "opponents": [
+      "hard"
+    ],
+    "gamesPerOpponent": 32,
+    "shardsPerOpponent": 4,
+    "workers": 2,
+    "output": "native/very-hard/final-hard-32-book.json",
+    "shardDirectory": "native/very-hard/final-hard-32-book-shards",
+    "maxActions": 400,
+    "repetition": 3,
+    "openingMode": "mixed",
+    "openingCount": 8,
+    "openingPlies": 8,
+    "timing": "shipping",
+    "platform": "desktop",
+    "budgetMs": 500,
+    "nodeBudget": 2000000,
+    "depth": 6,
+    "engine": "native",
+    "floor": "never",
+    "allStyles": true,
+    "challengerStyles": null,
+    "opponentStyles": null,
+    "styleOffset": 0,
+    "gates": false,
+    "maxUnresolvedRate": 0.005,
+    "maxOperationalFailures": 0,
+    "minSubgroupScore": 0.5,
+    "searchTrace": false,
+    "resume": false
+  }
+}

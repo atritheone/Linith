@@ -1,0 +1,26 @@
+{
+  "options": {
+    "bindings": "raw",
+    "exportRuntime": false,
+    "importMemory": false,
+    "initialMemory": 48,
+    "maximumMemory": 128,
+    "noAssert": true,
+    "runtime": "stub"
+  },
+  "targets": {
+    "release": {
+      "outFile": "../../src/renderer/game/veryHard/native/linith-core.wasm",
+      "optimizeLevel": 3,
+      "shrinkLevel": 1,
+      "converge": true,
+      "noAssert": true
+    },
+    "debug": {
+      "outFile": "build/linith-core.debug.wasm",
+      "debug": true,
+      "sourceMap": true,
+      "noAssert": false
+    }
+  }
+}

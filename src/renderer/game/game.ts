@@ -3,6 +3,8 @@
 // @ts-nocheck -- incremental migration boundary for the original UI/game coordinator.
 import { linithAI } from "./ai";
 import { computeFreezesOn } from "./encirclement";
+import VeryHardWorker from "./veryHard/worker?worker&inline";
+import { chooseVeryHardTimeBudget, detectVeryHardPlatform } from "./veryHard/timeManager";
 import { playReady, sfxReady } from "../sound";
 
 export function initGame(): void {
@@ -78,21 +80,32 @@ export function initGame(): void {
     let aiSide = null;                // null | sun | moon
     let gameOver = false;             // game over
     let aiMoveTimer = null;   // pending AI timeout id, or null when none
+    let veryHardRequestSequence = 0;
+    let veryHardSessionSequence = 0;
+    let veryHardWorker = null;
+    let activeVeryHardRequest = null;
+    let aiThinking = false;
 
     let aiDifficulty = (localStorage.getItem('linith_ai_difficulty') || 'medium');   // default ai difficulty
     // difficulty bridge (shared via localstorage)
     window.linithGetDifficulty = ()=> localStorage.getItem('linith_ai_difficulty') || 'medium';
     window.linithSetDifficulty = (d)=> {
-      aiDifficulty = d || 'medium';
+      const nextDifficulty = d || 'medium';
+      const changed = nextDifficulty !== aiDifficulty;
+      aiDifficulty = nextDifficulty;
       localStorage.setItem('linith_ai_difficulty', aiDifficulty);
+      if (changed) restartAiAfterConfigurationChange();
     };
 
     // style bridge (shared via localstorage)
     let aiStyle = (localStorage.getItem('linith_ai_style') || 'doctrinal');
     window.linithGetStyle = ()=> localStorage.getItem('linith_ai_style') || 'doctrinal';
     window.linithSetStyle = (s)=> {
-      aiStyle = s || 'doctrinal';
+      const nextStyle = s || 'doctrinal';
+      const changed = nextStyle !== aiStyle;
+      aiStyle = nextStyle;
       localStorage.setItem('linith_ai_style', aiStyle);
+      if (changed) restartAiAfterConfigurationChange();
     };
     // ensure our in-iife copy matches stored value on load
     aiStyle = window.linithGetStyle();
@@ -757,6 +770,7 @@ export function initGame(): void {
 
     // apply a replay snapshot and re-render
     function reviewApply(idx){
+      resetVeryHardSession();
       restoreState(replay[idx]);
       selected.clear();
       anchorIdx = null; action = null; splitIdx = null;
@@ -894,6 +908,7 @@ export function initGame(): void {
     // click handlers
     function reviewBack(fromAuto = false){
       if (appMode === 'menu') return;
+      resetVeryHardSession();
       // ensure we are in review mode so SFX and UI behave consistently
       appMode = (appMode === 'menu') ? 'playing' : appMode;
       appMode = 'review';
@@ -1764,16 +1779,274 @@ export function initGame(): void {
       }
     }
 
+    function veryHardTiming() {
+      const platform = detectVeryHardPlatform(
+        navigator.userAgent || '',
+        Boolean(window.linithDesktop)
+      );
+      return chooseVeryHardTimeBudget({ board, current, movesLeft }, platform);
+    }
+
+    // Exact deterministic identity for the position handed to a worker. The
+    // board is only 100 cells, so retaining every tile avoids accepting the
+    // wrong position through a lossy hash collision.
+    function positionFingerprint(b = board, player = current, actionsLeft = movesLeft) {
+      return `${player}:${actionsLeft}:${b.map((row) => row.join('')).join('/')}`;
+    }
+
+    function isCurrentVeryHardTurn(fingerprint, sessionId = veryHardSessionSequence) {
+      return sessionId === veryHardSessionSequence &&
+        appMode === 'playing' &&
+        !gameOver &&
+        turn === 'play' &&
+        aiSide !== null &&
+        aiSide === current &&
+        (window.linithGetDifficulty?.() || aiDifficulty) === 'very_hard' &&
+        positionFingerprint() === fingerprint;
+    }
+
+    function unlockAfterAiThinking() {
+      if (appMode === 'playing' && turn === 'play' && isAtTip()) {
+        enableBoardInteraction();
+      }
+    }
+
+    function terminateVeryHardWorker(worker = veryHardWorker) {
+      if (!worker) return;
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+      if (veryHardWorker === worker) veryHardWorker = null;
+    }
+
+    function disposeVeryHardRequest(request, unlock = true, terminateWorker = false) {
+      if (!request || activeVeryHardRequest !== request) return false;
+      if (request.timeout !== null) clearTimeout(request.timeout);
+      request.worker.onmessage = null;
+      request.worker.onerror = null;
+      if (terminateWorker) terminateVeryHardWorker(request.worker);
+      activeVeryHardRequest = null;
+      aiThinking = false;
+      if (unlock) unlockAfterAiThinking();
+      return true;
+    }
+
+    function cancelVeryHardSearch() {
+      const wasThinking = aiThinking;
+      const request = activeVeryHardRequest;
+      if (request) {
+        // A worker cannot process a cancellation message while synchronous
+        // search code is running, so cancellation deliberately discards it.
+        // Successful searches keep the worker and its bounded caches alive.
+        disposeVeryHardRequest(request, true, true);
+      } else if (wasThinking) {
+        aiThinking = false;
+        unlockAfterAiThinking();
+      }
+      return wasThinking || request !== null;
+    }
+
+    function performHardFallback(fingerprint, sessionId = veryHardSessionSequence) {
+      if (!isCurrentVeryHardTurn(fingerprint, sessionId)) return null;
+      selected.clear();
+      action = null;
+      anchorIdx = null;
+      const fallback = linithAI(board, current, 'hard');
+      if (!fallback) return null;
+      const beforeAction = positionFingerprint();
+      performAiAction(fallback);
+      return positionFingerprint() === beforeAction ? null : fallback;
+    }
+
+    function finishVeryHardFailure(request, reason) {
+      if (!disposeVeryHardRequest(request, true, true)) return;
+      if (reason) console.warn(`Very Hard AI unavailable; using Hard for this action: ${reason}`);
+      render();
+      performHardFallback(request.fingerprint, request.sessionId);
+    }
+
+    function isWorkerAction(actionValue) {
+      if (!actionValue || typeof actionValue !== 'object') return false;
+      if (actionValue.type === 'stone' || actionValue.type === 'swan') {
+        return Number.isInteger(actionValue.r) && Number.isInteger(actionValue.c);
+      }
+      if (actionValue.type === 'move' || actionValue.type === 'push') {
+        return Array.isArray(actionValue.dir) && actionValue.dir.length === 2 &&
+          actionValue.dir.every(Number.isInteger) &&
+          Array.isArray(actionValue.swans) && actionValue.swans.length > 0 &&
+          actionValue.swans.every(({r, c}) => Number.isInteger(r) && Number.isInteger(c));
+      }
+      return false;
+    }
+
+    function acknowledgeVeryHardAction(request, actualAction) {
+      if (!request || !actualAction ||
+          request.sessionId !== veryHardSessionSequence ||
+          request.worker !== veryHardWorker) return;
+      try {
+        request.worker.postMessage({
+          type: 'commit',
+          requestId: request.requestId,
+          sessionId: request.sessionId,
+          fingerprint: request.fingerprint,
+          preActionState: request.state,
+          action: actualAction
+        });
+      } catch {
+        // A worker that missed an accepted action must not retain incomplete
+        // history or a continuation derived from a different line.
+        terminateVeryHardWorker(request.worker);
+      }
+    }
+
+    function startVeryHardSearch() {
+      const fingerprint = positionFingerprint();
+      const style = window.linithGetStyle?.() || aiStyle || 'doctrinal';
+      const timing = veryHardTiming();
+      const budgetMs = timing.budgetMs;
+      const requestId = ++veryHardRequestSequence;
+      const sessionId = veryHardSessionSequence;
+      const state = {
+        board: board.map((row) => row.slice()),
+        current,
+        movesLeft
+      };
+
+      aiThinking = true;
+      disableBoardInteraction();
+      render();
+
+      let worker = veryHardWorker;
+      if (!worker) {
+        try {
+          worker = new VeryHardWorker();
+          veryHardWorker = worker;
+        } catch (error) {
+          aiThinking = false;
+          unlockAfterAiThinking();
+          render();
+          performHardFallback(fingerprint);
+          return;
+        }
+      }
+
+      const request = {
+        requestId,
+        sessionId,
+        fingerprint,
+        state,
+        worker,
+        timeout: null
+      };
+      activeVeryHardRequest = request;
+
+      worker.onmessage = (event) => {
+        if (activeVeryHardRequest !== request) return;
+        const message = event.data || {};
+        const identityMatches = message.requestId === requestId &&
+          message.sessionId === sessionId &&
+          sessionId === veryHardSessionSequence &&
+          message.fingerprint === fingerprint;
+        const positionMatches = isCurrentVeryHardTurn(fingerprint, sessionId);
+
+        // Never let a superseded or position-mismatched response influence the
+        // live match. Destroy that worker and schedule a clean request against
+        // the current state instead of turning stale traffic into a fallback
+        // move on a possibly new game.
+        if (!identityMatches || !positionMatches) {
+          disposeVeryHardRequest(request, true, true);
+          render();
+          if (appMode === 'playing' && turn === 'play' && aiSide === current) {
+            aiturn();
+          }
+          return;
+        }
+
+        if (message.type === 'error') {
+          finishVeryHardFailure(request, message.message || 'worker search failed');
+          return;
+        }
+
+        const resultAction = message.action;
+        if (message.type !== 'result' || !isWorkerAction(resultAction)) {
+          finishVeryHardFailure(request, 'worker returned no valid action');
+          return;
+        }
+
+        disposeVeryHardRequest(request, true);
+        render();
+        const beforeAction = positionFingerprint();
+        performAiAction(resultAction);
+        if (positionFingerprint() === beforeAction) {
+          const actualFallback = performHardFallback(beforeAction, sessionId);
+          if (actualFallback) acknowledgeVeryHardAction(request, actualFallback);
+        } else {
+          acknowledgeVeryHardAction(request, resultAction);
+        }
+      };
+
+      worker.onerror = (event) => {
+        event.preventDefault?.();
+        finishVeryHardFailure(request, event.message || 'worker crashed');
+      };
+
+      // The search itself observes budgetMs. This watchdog only handles a
+      // wedged worker or a response lost during platform shutdown.
+      request.timeout = setTimeout(() => {
+        finishVeryHardFailure(request, 'worker exceeded its response deadline');
+      }, timing.hardLimitMs + 100);
+
+      try {
+        worker.postMessage({
+          type: 'search',
+          requestId,
+          sessionId,
+          fingerprint,
+          state,
+          style,
+          budgetMs
+        });
+      } catch (error) {
+        finishVeryHardFailure(request, error instanceof Error ? error.message : 'worker request failed');
+      }
+    }
+
     function cancelAiMove() {
+      let cancelled = false;
       if (aiMoveTimer !== null) {
         clearTimeout(aiMoveTimer);
         aiMoveTimer = null;
+        cancelled = true;
       }
+      return cancelVeryHardSearch() || cancelled;
+    }
+
+    // A worker's bounded caches are valuable within one live match, but must
+    // never cross a match/timeline/configuration boundary. Incrementing the
+    // session before any later request also makes a delayed old response
+    // ineligible even if its board fingerprint happens to recur.
+    function resetVeryHardSession() {
+      const wasThinking = cancelAiMove();
+      terminateVeryHardWorker();
+      veryHardSessionSequence++;
+      return wasThinking;
+    }
+
+    function restartAiAfterConfigurationChange() {
+      // Evaluation style is part of cached search values. Drop an idle worker
+      // as well as an active one whenever difficulty or style changes.
+      const wasThinking = resetVeryHardSession();
+      const shouldRestart = appMode === 'playing' &&
+        turn === 'play' &&
+        aiSide !== null &&
+        aiSide === current;
+      if (wasThinking || shouldRestart) render();
+      if (shouldRestart) aiturn();
     }
 
     function scheduleAiMove(delayMs = 120) {
       // avoid double-scheduling
-      if (aiMoveTimer !== null) return;
+      if (aiMoveTimer !== null || activeVeryHardRequest !== null) return;
 
       // basic guard: only in a real AI turn
       if (!aiSide) return;
@@ -1781,16 +2054,41 @@ export function initGame(): void {
       if (turn !== 'play') return;
       if (aiSide !== current) return;
 
+      const scheduledDifficulty = (window.linithGetDifficulty?.() || aiDifficulty);
+      const scheduledSessionId = veryHardSessionSequence;
+      if (scheduledDifficulty === 'very_hard') {
+        aiThinking = true;
+        disableBoardInteraction();
+        render();
+      }
+
       aiMoveTimer = setTimeout(() => {
         aiMoveTimer = null;
 
         // give the UI one paint frame to settle, *then* re-check
         requestAnimationFrame(() => {
-          if (appMode !== 'playing') return;
-          if (turn !== 'play') return;
-          if (!aiSide || aiSide !== current) return;
+          // The timeout may have fired just before a reset/configuration
+          // change, leaving this animation-frame callback beyond the reach of
+          // clearTimeout. A session mismatch makes that callback inert.
+          if (scheduledSessionId !== veryHardSessionSequence) return;
+          if (appMode !== 'playing' || turn !== 'play' || !aiSide || aiSide !== current) {
+            if (aiThinking) {
+              cancelVeryHardSearch();
+              render();
+            }
+            return;
+          }
 
           const difficulty = (window.linithGetDifficulty?.() || aiDifficulty);
+          if (aiThinking && difficulty !== 'very_hard') {
+            aiThinking = false;
+            unlockAfterAiThinking();
+            render();
+          }
+          if (difficulty === 'very_hard') {
+            startVeryHardSearch();
+            return;
+          }
           const act = linithAI(board, current, difficulty);
           performAiAction(act);
         });
@@ -2095,7 +2393,8 @@ export function initGame(): void {
       } else {
         const who = current===SUN? 'Sun ☼' : 'Moon ☾';
         const acts = `${movesLeft} action${movesLeft>1?'s':''}`;
-        phtml = `<span class="pill ${current===SUN?'sun':'moon'}">Turn: ${who}${movesLeft>1 ? ` • ${acts}` : ''}</span>`;
+        const thinking = aiThinking && aiSide === current ? ' • AI thinking…' : '';
+        phtml = `<span class="pill ${current===SUN?'sun':'moon'}">Turn: ${who}${movesLeft>1 ? ` • ${acts}` : ''}${thinking}</span>`;
       }
       elTurn.innerHTML = phtml;
 
@@ -2107,7 +2406,7 @@ export function initGame(): void {
        =============================================================== */
     function reset(){
 
-      cancelAiMove();
+      resetVeryHardSession();
       // re-enable board
       enableBoardInteraction();
       // reset transient ui
@@ -2164,6 +2463,7 @@ export function initGame(): void {
     }
 
     function startgame(){
+      resetVeryHardSession();
       appMode = 'playing';
       recite = false;
       gameOver = false;
@@ -3351,7 +3651,7 @@ export function initGame(): void {
       // centralised game finish: log → render → (next frame) popup
       function finishgame(message, logLine){
         stopMasterLoop();
-        cancelAiMove();
+        resetVeryHardSession();
         timerStop()
         gameOver = true;
         appMode = 'review';          // freeze play/ai
@@ -3537,13 +3837,13 @@ export function initGame(): void {
         }
 
         // undo - only at tip, during a playable turn, with history
-        setMuted(btnUndo, !inGame || !atTip || history.length === 0 || turn !== 'play' || gameOver);
+        setMuted(btnUndo, aiThinking || !inGame || !atTip || history.length === 0 || turn !== 'play' || gameOver);
 
         // surrender - only at tip during a playable turn
-        setMuted(btnSurrender, !canPlay || gameOver);
+        setMuted(btnSurrender, aiThinking || !canPlay || gameOver);
 
         // hint - enabled during any in-game snapshot (playing or review), including rewound
-        setMuted(btnHint, !inGame || !atTip || history.length === 0 || turn !== 'play' || gameOver);
+        setMuted(btnHint, aiThinking || !inGame || !atTip || history.length === 0 || turn !== 'play' || gameOver);
 
         // save - only enabled in review mode (after a game finished, before a new one starts)
         setMuted(btnSave, appMode !== 'review');
@@ -3563,6 +3863,8 @@ export function initGame(): void {
       if (!isAtTip() || appMode === 'menu' || turn !== 'play') return;
 
       if (history.length <= 1) return; // nothing to undo beyond initial state
+
+      resetVeryHardSession();
 
       // Pop snapshots until we remove exactly one move snapshot
       let removedMove = false;
@@ -3897,6 +4199,7 @@ export function initGame(): void {
     }
 
     function enterrecital(payload, fileName){
+      resetVeryHardSession();
       try { stopMasterLoop(); } catch {}
       try { timerStop?.(); } catch {}
 
