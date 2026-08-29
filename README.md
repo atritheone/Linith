@@ -180,12 +180,14 @@ available as `npm run ai:teacher`, `npm run ai:tune`, and `npm run ai:book`;
 tuned weights or book entries must pass held-out/agreement checks before they
 are copied into shipping code.
 
-The current personality-aware bundle is `b7ebe9…512d79` WASM with the
-independently regenerated `a14357…37aec3` opening book. Its matched-state
+The current personality-aware bundle is `5fcb75…0e794` WASM with the
+independently regenerated `70e581…339ef` opening book. Its matched-state
 personality audit uses 24 identical positions per style at a 10,000-node
-budget, requires completed search depth and legal actions, and verifies that
-every named profile changes at least one decision from Doctrinal. Run it with
-`npm run audit:personalities`.
+budget, freezes the Doctrinal decision fingerprint, requires completed search
+depth and legal actions, and verifies the bounded action-aware signal for every
+named profile. The complete 28-combination difficulty/personality screen is
+available as `npm run qualify:ai-matrix`; run the faster Very Hard character
+audit with `npm run audit:personalities`.
 
 The following strength results apply to the earlier frozen `602974…628c9`
 WASM and `7ea553…74dcc` book; they are retained as historical release evidence
@@ -234,6 +236,15 @@ npm run dist:mac
 ```
 
 Run each packaging command on its native operating system. Packages are written to `release/`.
+
+To stage the clean-build inputs for the Linux or macOS build VM under `release/`, run:
+
+```powershell
+npm run prepare:linux-vm
+npm run prepare:mac-vm
+```
+
+Copy the corresponding `linux-vm-build-input` or `mac-vm-build-input` folder to the VM. Each staged folder includes its platform-specific build instructions.
 
 ### Android
 

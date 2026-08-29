@@ -26,6 +26,9 @@ interface WasmCoreExports {
     exactDepth: number
   ): number;
   get_search_score(): number;
+  get_search_objective_score(): number;
+  get_search_strongest_objective_score(): number;
+  get_search_personality_bonus(): number;
   get_search_nodes(): number;
   get_search_generated_actions(): number;
   get_search_evaluations(): number;
@@ -67,6 +70,14 @@ export interface NativeVeryHardOptions {
 
 export interface NativeVeryHardDiagnostics {
   score: number;
+  /** Canonical value of the selected line, excluding character preference. */
+  objectiveScore: number;
+  /** Best canonical value among the root candidates searched at final depth. */
+  strongestObjectiveScore: number;
+  /** Bounded character-only adjustment on the selected root action. */
+  personalityBonus: number;
+  /** Canonical value surrendered to express character, structurally capped at 900. */
+  objectiveRegret: number;
   nodes: number;
   generatedActions: number;
   evaluatedPositions: number;
@@ -229,6 +240,13 @@ export class NativeVeryHardCore {
     );
     const diagnostics: NativeVeryHardDiagnostics = {
       score: this.core.get_search_score(),
+      objectiveScore: this.core.get_search_objective_score(),
+      strongestObjectiveScore: this.core.get_search_strongest_objective_score(),
+      personalityBonus: this.core.get_search_personality_bonus(),
+      objectiveRegret: Math.max(
+        0,
+        this.core.get_search_strongest_objective_score() - this.core.get_search_objective_score()
+      ),
       nodes: this.core.get_search_nodes(),
       generatedActions: this.core.get_search_generated_actions(),
       evaluatedPositions: this.core.get_search_evaluations(),

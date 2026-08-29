@@ -15,7 +15,11 @@ import {
   type LinithAction,
   type SearchState
 } from "../rulesEngine";
-import { evaluateVeryHardPosition, VERY_HARD_MATE_SCORE } from "./evaluate";
+import {
+  evaluateVeryHardPosition,
+  evaluateVeryHardRootPersonality,
+  VERY_HARD_MATE_SCORE
+} from "./evaluate";
 import { lookupOpeningBookAction } from "./openingBook";
 import type {
   VeryHardDiagnostics,
@@ -236,7 +240,9 @@ function scoreFromTransposition(score: number, ply: number): number {
 
 function evaluate(state: SearchState, perspective: Player, context: SearchContext): number {
   context.evaluatedPositions += 1;
-  return evaluateVeryHardPosition(state, perspective, context.options.style);
+  // Recursive strength is canonical for every character. Personality is a
+  // bounded, action-aware root preference applied only after a line is valued.
+  return evaluateVeryHardPosition(state, perspective, "doctrinal");
 }
 
 function positionKey(state: SearchState, context: SearchContext): string {
@@ -794,10 +800,6 @@ function searchChild(
   } else {
     result = alphaBeta(info.applied, childDepth, alpha, beta, ply + 1, exactRemaining, context, false);
   }
-  if (ply === 0) {
-    const visits = context.memory.rootVisits.get(boardKey(info.applied)) ?? 0;
-    if (visits > 0) result = { ...result, score: result.score - visits * ROOT_HISTORY_PENALTY };
-  }
   return result;
 }
 
@@ -883,6 +885,19 @@ function alphaBeta(
       checkForStop(context, false);
       const info = actions[index];
       if (ply === 0) context.rootActionsSearched.add(info.key);
+      const rootPersonality = ply === 0
+        ? evaluateVeryHardRootPersonality(
+            state,
+            info.action,
+            info.applied,
+            context.rootPlayer,
+            context.options.style
+          )
+        : 0;
+      const rootVisits = ply === 0
+        ? context.memory.rootVisits.get(boardKey(info.applied)) ?? 0
+        : 0;
+      const rootAdjustment = rootPersonality - rootVisits * ROOT_HISTORY_PENALTY;
 
       const canFutilityPrune =
         !pvNode && ply > 0 && depth === 1 && index >= 8 && info.quiet && info.changesTurn &&
@@ -900,19 +915,66 @@ function alphaBeta(
 
       let child: SearchValue;
       if (index === 0) {
-        child = searchChild(state, info, depth, alpha, beta, ply, exactRemaining, context, reduction);
+        child = searchChild(
+          state,
+          info,
+          depth,
+          alpha - rootAdjustment,
+          beta - rootAdjustment,
+          ply,
+          exactRemaining,
+          context,
+          reduction
+        );
       } else {
-        child = searchChild(state, info, depth, alpha, alpha + 1, ply, exactRemaining, context, reduction);
+        child = searchChild(
+          state,
+          info,
+          depth,
+          alpha - rootAdjustment,
+          alpha + 1 - rootAdjustment,
+          ply,
+          exactRemaining,
+          context,
+          reduction
+        );
+        if (rootAdjustment !== 0) child = { ...child, score: child.score + rootAdjustment };
         if (reduction > 0 && child.score > alpha) {
           context.reSearches += 1;
-          child = searchChild(state, info, depth, alpha, alpha + 1, ply, exactRemaining, context, 0);
+          child = searchChild(
+            state,
+            info,
+            depth,
+            alpha - rootAdjustment,
+            alpha + 1 - rootAdjustment,
+            ply,
+            exactRemaining,
+            context,
+            0
+          );
+          if (rootAdjustment !== 0) child = { ...child, score: child.score + rootAdjustment };
         }
         if (child.score > alpha && child.score < beta) {
           context.reSearches += 1;
-          child = searchChild(state, info, depth, alpha, beta, ply, exactRemaining, context, 0);
+          child = searchChild(
+            state,
+            info,
+            depth,
+            alpha - rootAdjustment,
+            beta - rootAdjustment,
+            ply,
+            exactRemaining,
+            context,
+            0
+          );
+          if (rootAdjustment !== 0) child = { ...child, score: child.score + rootAdjustment };
         }
       }
       allChildrenSolved &&= child.solved;
+
+      if (index === 0 && rootAdjustment !== 0) {
+        child = { ...child, score: child.score + rootAdjustment };
+      }
 
       if (child.score > bestScore ||
           (child.score === bestScore && bestAction !== null && compareKeys(info.key, bestAction.key) < 0)) {

@@ -347,6 +347,10 @@ function nativeResult(
 ): NativeVeryHardResult {
   const diagnostics = {
     score: 0,
+    objectiveScore: 0,
+    strongestObjectiveScore: 0,
+    personalityBonus: 0,
+    objectiveRegret: 0,
     nodes: 1,
     generatedActions: 1,
     evaluatedPositions: 1,

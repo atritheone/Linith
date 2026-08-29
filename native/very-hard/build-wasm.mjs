@@ -19,8 +19,10 @@ const traitNames = [
   "territory",
   "fragmentation",
   "development",
+  "earlyStone",
   "structure",
-  "mobility"
+  "mobility",
+  "sacrificeTolerance"
 ];
 const nativeNames = Object.fromEntries(traitNames.map((name) => [name, `personality${name[0].toUpperCase()}${name.slice(1)}`]));
 const generated = [

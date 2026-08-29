@@ -19,7 +19,11 @@ import {
   generateLegalActions,
   type SearchState
 } from "../src/renderer/game/rulesEngine";
-import { evaluateVeryHardPosition } from "../src/renderer/game/veryHard/evaluate";
+import {
+  evaluateVeryHardPosition,
+  evaluateVeryHardRootPersonality,
+  VERY_HARD_ROOT_PERSONALITY_LIMIT
+} from "../src/renderer/game/veryHard/evaluate";
 
 const STYLES = ["doctrinal", "constrictor", "rupture", "blizzard", "librarian", "swarm", "fortress"];
 
@@ -37,6 +41,23 @@ test("native zero-budget root scan preserves a quiet only-defense", () => {
   const result = core.search(state, { nodeBudget: 0, budgetMs: 0 });
   assert.ok(result.action);
   assert.equal(actionKey(result.action), "move:0,0:1,1");
+});
+
+test("no personality can override an immediate win or the unique root defense", () => {
+  for (const style of STYLES) {
+    const winState = immediateWinState();
+    const win = createNativeVeryHardCoreSync().search(winState, { style, nodeBudget: 0, budgetMs: 0 });
+    assert.ok(win.action);
+    assert.equal(applyAction(winState, win.action)?.outcome, "sun", `${style} win`);
+
+    const defense = createNativeVeryHardCoreSync().search(onlyDefenseState(), {
+      style,
+      nodeBudget: 0,
+      budgetMs: 0
+    });
+    assert.ok(defense.action);
+    assert.equal(actionKey(defense.action), "move:0,0:1,1", `${style} defense`);
+  }
 });
 
 test("native turn depth includes both scheduled actions", () => {
@@ -349,6 +370,35 @@ test("native evaluation exactly matches TypeScript across features and styles", 
           `${style} perspective ${perspective}`
         );
       }
+    }
+  }
+});
+
+test("native root personality diagnostics preserve the bounded objective-first contract", () => {
+  const state = developmentState(1);
+  for (const style of STYLES) {
+    const result = createNativeVeryHardCoreSync().search(state, {
+      style,
+      maxTurnDepth: 2,
+      tacticalDepth: 1,
+      exactDepth: 0,
+      nodeBudget: 10_000,
+      budgetMs: 0
+    });
+    assert.ok(result.action);
+    const applied = applyAction(state, result.action);
+    assert.ok(applied);
+    assert.equal(
+      result.personalityBonus,
+      evaluateVeryHardRootPersonality(state, result.action, applied, state.current, style),
+      style
+    );
+    assert.equal(result.score, result.objectiveScore + result.personalityBonus, style);
+    assert.ok(Math.abs(result.personalityBonus) <= VERY_HARD_ROOT_PERSONALITY_LIMIT, style);
+    assert.ok(result.objectiveRegret <= VERY_HARD_ROOT_PERSONALITY_LIMIT * 2, style);
+    if (style === "doctrinal") {
+      assert.equal(result.personalityBonus, 0);
+      assert.equal(result.objectiveRegret, 0);
     }
   }
 });

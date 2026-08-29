@@ -14,8 +14,16 @@ import {
   SWAN_SUN,
   type Board
 } from "../src/renderer/game/encirclement";
-import { explainVeryHardPosition } from "../src/renderer/game/veryHard/evaluate";
-import type { SearchState } from "../src/renderer/game/rulesEngine";
+import {
+  applyAction,
+  generateLegalActions,
+  type SearchState
+} from "../src/renderer/game/rulesEngine";
+import {
+  evaluateVeryHardRootPersonality,
+  explainVeryHardPosition,
+  VERY_HARD_ROOT_PERSONALITY_LIMIT
+} from "../src/renderer/game/veryHard/evaluate";
 
 test("the personality registry is complete, ordered, and falls back to Doctrinal", () => {
   assert.deepEqual(AI_STYLE_LIST.map(({ id }) => id), [...AI_STYLE_IDS]);
@@ -63,6 +71,28 @@ test("personality scores remain exactly antisymmetric", () => {
       assert.equal(sun.style + moon.style, 0, style);
       assert.equal(sun.total + moon.total, 0, style);
     }
+  }
+});
+
+test("root personality is action-aware, bounded, and leaves Doctrinal exactly untouched", () => {
+  const scores = new Map<string, number[]>();
+  for (const style of AI_STYLE_IDS) scores.set(style, []);
+  for (const state of personalityStates()) {
+    for (const action of generateLegalActions(state)) {
+      const next = applyAction(state, action);
+      assert.ok(next);
+      for (const style of AI_STYLE_IDS) {
+        const score = evaluateVeryHardRootPersonality(state, action, next, state.current, style);
+        assert.ok(Math.abs(score) <= VERY_HARD_ROOT_PERSONALITY_LIMIT, `${style}: ${score}`);
+        scores.get(style)!.push(score);
+      }
+    }
+  }
+
+  assert.deepEqual(new Set(scores.get("doctrinal")), new Set([0]));
+  for (const style of AI_STYLE_IDS.slice(1)) {
+    const values = scores.get(style)!;
+    assert.ok(Math.max(...values) > Math.min(...values), `${style} must distinguish concrete actions`);
   }
 });
 

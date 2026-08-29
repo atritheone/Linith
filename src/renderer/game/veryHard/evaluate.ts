@@ -6,6 +6,8 @@ import {
   inBounds,
   isActiveSwan,
   opponentOf,
+  type AppliedAction,
+  type LinithAction,
   type SearchState
 } from "../rulesEngine";
 import {
@@ -19,6 +21,12 @@ import {
 
 export const VERY_HARD_MATE_SCORE = 1_000_000_000;
 export const VERY_HARD_STYLE_TIE_BREAK_LIMIT = 900;
+/**
+ * A personality may only break close root choices. Keeping the per-action
+ * adjustment to half the positional style band limits the maximum objective
+ * regret between any two personality-preferred actions to 900 points.
+ */
+export const VERY_HARD_ROOT_PERSONALITY_LIMIT = 450;
 
 /**
  * Explicit, integer weights make the hand-tuned evaluator reproducible and
@@ -320,4 +328,44 @@ export function evaluateVeryHardPosition(
   style = "doctrinal"
 ): number {
   return explainVeryHardPosition(state, perspective, style).total;
+}
+
+/**
+ * Score the character expressed by one concrete root transition. This is kept
+ * separate from the recursive evaluator so personality cannot compound with
+ * depth or alter forced tactical results. Doctrinal has no traits, making this
+ * function an exact zero for the canonical AI.
+ */
+export function evaluateVeryHardRootPersonality(
+  before: SearchState,
+  action: LinithAction,
+  after: AppliedAction,
+  perspective: Player,
+  style = "doctrinal"
+): number {
+  if (after.outcome !== null) return 0;
+  const traits = profile(style).traits;
+  if (Object.keys(traits).length === 0) return 0;
+
+  const beforeStyle = explainVeryHardPosition(before, perspective, style).style;
+  const afterStyle = explainVeryHardPosition(after, perspective, style).style;
+  const undeployed = Math.max(0, 6 - countTotalSwans(before.board, perspective));
+  const placementIntent = action.type === "swan"
+    ? (traits.development ?? 0) * undeployed * 40
+    : action.type === "stone"
+      ? (traits.earlyStone ?? 0) * undeployed * 40
+      : 0;
+  const concreteFreezeIntent = (traits.freezeUrgency ?? 0) * after.opponentLoss * 160;
+  const ownFrozenBefore = frozenCount(before.board, perspective);
+  const ownFrozenAfter = frozenCount(after.board, perspective);
+  const concreteSacrifice = Math.min(
+    after.opponentLoss,
+    Math.max(0, ownFrozenAfter - ownFrozenBefore)
+  );
+  const sacrificeIntent = (traits.sacrificeTolerance ?? 0) * concreteSacrifice * 120;
+  const raw = (afterStyle - beforeStyle)
+    + placementIntent
+    + concreteFreezeIntent
+    + sacrificeIntent;
+  return Math.round(bounded(raw, VERY_HARD_ROOT_PERSONALITY_LIMIT));
 }

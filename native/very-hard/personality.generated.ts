@@ -71,6 +71,16 @@ export function personalityDevelopment(style: i32): f64 {
   return 0.0;
 }
 
+export function personalityEarlyStone(style: i32): f64 {
+  if (style == 1) return 0.100000;
+  if (style == 2) return 0.000000;
+  if (style == 3) return 0.150000;
+  if (style == 4) return -0.100000;
+  if (style == 5) return -1.500000;
+  if (style == 6) return 0.700000;
+  return 0.0;
+}
+
 export function personalityStructure(style: i32): f64 {
   if (style == 1) return 0.700000;
   if (style == 2) return 0.250000;
@@ -88,6 +98,16 @@ export function personalityMobility(style: i32): f64 {
   if (style == 4) return 0.800000;
   if (style == 5) return 0.550000;
   if (style == 6) return -0.200000;
+  return 0.0;
+}
+
+export function personalitySacrificeTolerance(style: i32): f64 {
+  if (style == 1) return 0.050000;
+  if (style == 2) return 0.250000;
+  if (style == 3) return 0.650000;
+  if (style == 4) return 0.000000;
+  if (style == 5) return 0.200000;
+  if (style == 6) return 0.000000;
   return 0.0;
 }
 

@@ -13,11 +13,13 @@
 import {
   personalityContainment,
   personalityDevelopment,
+  personalityEarlyStone,
   personalityFragmentation,
   personalityFreezeUrgency,
   personalityLibertyBalance,
   personalityMobility,
   personalitySelfPreservation,
+  personalitySacrificeTolerance,
   personalityStructure,
   personalityTerritory
 } from "./personality.generated";
@@ -108,6 +110,8 @@ const actionTactical = new StaticArray<u8>(MAX_PLY * MAX_ACTIONS);
 const rootOrderedIndexes = new StaticArray<u16>(MAX_ACTIONS);
 const rootTactical = new StaticArray<u8>(MAX_ACTIONS);
 const rootDepthScores = new StaticArray<i32>(MAX_ACTIONS);
+const rootPersonalityBonuses = new StaticArray<i32>(MAX_ACTIONS);
+const rootDepthObjectiveScores = new StaticArray<i32>(MAX_ACTIONS);
 const pathHashes = new StaticArray<u64>(MAX_PLY);
 const ROOT_HISTORY_SIZE: i32 = 32;
 const rootHistoryHashes = new StaticArray<u64>(ROOT_HISTORY_SIZE);
@@ -230,6 +234,9 @@ let searchCompletedDepth: i32 = 0;
 let searchAttemptedDepth: i32 = 0;
 let searchBestRootIndex: i32 = -1;
 let searchBestScore: i32 = 0;
+let searchBestObjectiveScore: i32 = 0;
+let searchStrongestObjectiveScore: i32 = 0;
+let searchBestPersonalityBonus: i32 = 0;
 let searchStopReason: i32 = 0; // 0 max depth, 1 deadline, 2 node budget
 let searchStopped: bool = false;
 
@@ -1031,7 +1038,7 @@ function territoryBalance(mine: i32, theirs: i32): i32 {
   return score;
 }
 
-function evaluatePosition(perspective: i32): i32 {
+function evaluateStyledPosition(perspective: i32, style: i32): i32 {
   const opponent = other(perspective);
   const myActive = countActive(perspective);
   const theirActive = countActive(opponent);
@@ -1064,23 +1071,88 @@ function evaluatePosition(perspective: i32): i32 {
   const pressureSignal = max<f64>(-80.0, min<f64>(80.0, f64(pressure) / 100.0));
   const territorySignal = max<f64>(-60.0, min<f64>(60.0, f64(territoryScore) / 20.0));
   const urgencySignal = max<f64>(-60.0, min<f64>(60.0, f64(urgency) / 500.0));
-  const fragmentation = personalityFragmentation(searchStyle);
+  const fragmentation = personalityFragmentation(style);
   const fragmentationBalance = fragmentation == 0.0
     ? 0
     : activeGroupCount(opponent) - activeGroupCount(perspective);
-  const styleRaw = 3.0 * (personalityFreezeUrgency(searchStyle) * f64(theirFrozen - myFrozen) * 35.0 +
-    personalitySelfPreservation(searchStyle) * urgencySignal +
-    personalityLibertyBalance(searchStyle) * f64(libertyDifference) * 4.0 +
-    personalityContainment(searchStyle) * pressureSignal +
-    personalityTerritory(searchStyle) * territorySignal +
+  const styleRaw = 3.0 * (personalityFreezeUrgency(style) * f64(theirFrozen - myFrozen) * 35.0 +
+    personalitySelfPreservation(style) * urgencySignal +
+    personalityLibertyBalance(style) * f64(libertyDifference) * 4.0 +
+    personalityContainment(style) * pressureSignal +
+    personalityTerritory(style) * territorySignal +
     fragmentation * f64(fragmentationBalance) * 25.0 +
-    personalityDevelopment(searchStyle) * f64(totalMine - totalTheirs) * 20.0 +
-    personalityStructure(searchStyle) * f64(contactDifference) * 3.0 +
-    personalityMobility(searchStyle) * f64(mobilityDifference) * 1.5);
+    personalityDevelopment(style) * f64(totalMine - totalTheirs) * 20.0 +
+    personalityStructure(style) * f64(contactDifference) * 3.0 +
+    personalityMobility(style) * f64(mobilityDifference) * 1.5);
   const styleDelta = max<i32>(-900, min<i32>(900, i32(Math.floor(styleRaw + 0.5))));
   const value = frozen + activity + libertyScore + pressure + territoryScore + development +
     centre + mobility + urgency + phase + tempo + styleDelta;
   return max<i32>(-MATE_SCORE / 4, min<i32>(MATE_SCORE / 4, value));
+}
+
+function evaluatePosition(perspective: i32): i32 {
+  return evaluateStyledPosition(perspective, 0);
+}
+
+function positionStyleScore(perspective: i32, style: i32): i32 {
+  if (style == 0) return 0;
+  const opponent = other(perspective);
+  const myFrozen = frozenCount(perspective);
+  const theirFrozen = frozenCount(opponent);
+  const myLiberties = libertiesFor(perspective);
+  const theirLiberties = libertiesFor(opponent);
+  const contactDifference = stoneContacts(opponent) - stoneContacts(perspective);
+  const pressure = (groupTightness(opponent) - groupTightness(perspective)) * 42 +
+    contactDifference * 210;
+  const urgency = groupUrgency(opponent) - groupUrgency(perspective);
+  const territoryScore = territoryBalance(perspective, opponent) * 18;
+  const totalMine = countTotal(perspective);
+  const totalTheirs = countTotal(opponent);
+  const mobilityDifference = localMobility(perspective) - localMobility(opponent);
+  const pressureSignal = max<f64>(-80.0, min<f64>(80.0, f64(pressure) / 100.0));
+  const territorySignal = max<f64>(-60.0, min<f64>(60.0, f64(territoryScore) / 20.0));
+  const urgencySignal = max<f64>(-60.0, min<f64>(60.0, f64(urgency) / 500.0));
+  const fragmentation = personalityFragmentation(style);
+  const fragmentationBalance = fragmentation == 0.0
+    ? 0
+    : activeGroupCount(opponent) - activeGroupCount(perspective);
+  const raw = 3.0 * (personalityFreezeUrgency(style) * f64(theirFrozen - myFrozen) * 35.0 +
+    personalitySelfPreservation(style) * urgencySignal +
+    personalityLibertyBalance(style) * f64(myLiberties - theirLiberties) * 4.0 +
+    personalityContainment(style) * pressureSignal +
+    personalityTerritory(style) * territorySignal +
+    fragmentation * f64(fragmentationBalance) * 25.0 +
+    personalityDevelopment(style) * f64(totalMine - totalTheirs) * 20.0 +
+    personalityStructure(style) * f64(contactDifference) * 3.0 +
+    personalityMobility(style) * f64(mobilityDifference) * 1.5);
+  return max<i32>(-900, min<i32>(900, i32(Math.floor(raw + 0.5))));
+}
+
+function prepareRootPersonalityBonuses(count: i32): void {
+  for (let index = 0; index < count; index++) unchecked(rootPersonalityBonuses[index] = 0);
+  if (searchStyle == 0 || count <= 0) return;
+  const beforeStyle = positionStyleScore(searchRootPlayer, searchStyle);
+  const undeployed = max<i32>(0, 6 - countTotal(searchRootPlayer));
+  const ownFrozenBefore = frozenCount(searchRootPlayer);
+  for (let index = 0; index < count; index++) {
+    const type = unchecked(actionTypes[actionOffset(0, index)]);
+    if (!applyAt(0, index)) continue;
+    let bonus = 0;
+    if (gameOutcome == 0) {
+      const afterStyle = positionStyleScore(searchRootPlayer, searchStyle);
+      let placement = 0.0;
+      if (type == ACTION_SWAN) placement = personalityDevelopment(searchStyle) * f64(undeployed) * 40.0;
+      else if (type == ACTION_STONE) placement = personalityEarlyStone(searchStyle) * f64(undeployed) * 40.0;
+      const freezeIntent = personalityFreezeUrgency(searchStyle) * f64(lastOpponentLoss) * 160.0;
+      const ownFrozen = max<i32>(0, frozenCount(searchRootPlayer) - ownFrozenBefore);
+      const concreteSacrifice = min<i32>(lastOpponentLoss, ownFrozen);
+      const sacrificeIntent = personalitySacrificeTolerance(searchStyle) * f64(concreteSacrifice) * 120.0;
+      const raw = f64(afterStyle - beforeStyle) + placement + freezeIntent + sacrificeIntent;
+      bonus = max<i32>(-450, min<i32>(450, i32(Math.floor(raw + 0.5))));
+    }
+    unchecked(rootPersonalityBonuses[index] = bonus);
+    undo_position();
+  }
 }
 
 /** Cheap ordering-only evaluation; avoids territory and group flood-fills. */
@@ -1671,6 +1743,9 @@ function searchRootAtDepth(turnDepth: i32): i32 {
   const beta = SEARCH_INFINITY;
   let best = -SEARCH_INFINITY;
   let bestIndex = -1;
+  let bestObjective = -SEARCH_INFINITY;
+  let strongestObjective = -SEARCH_INFINITY;
+  let bestPersonalityBonus = 0;
   let children = 0;
   let allChildrenSolved = true;
   let historyDependent = false;
@@ -1695,6 +1770,7 @@ function searchRootAtDepth(turnDepth: i32): i32 {
     }
     const actor = currentPlayer;
     if (!applyAt(0, index)) continue;
+    const personalityBonus = unchecked(rootPersonalityBonuses[index]);
     const repeatsPriorResult = priorRootResult(hashPosition());
     const childDepth = currentPlayer == actor && gameOutcome == 0 ? turnDepth : turnDepth - 1;
     let score: i32;
@@ -1702,19 +1778,28 @@ function searchRootAtDepth(turnDepth: i32): i32 {
     let childHistoryDependent = false;
     if (gameOutcome != 0) score = terminalScore(gameOutcome, 1);
     else if (children == 0) {
-      score = alphaBeta(childDepth, alpha, beta, 1, -1);
+      score = alphaBeta(childDepth, alpha - personalityBonus, beta - personalityBonus, 1, -1);
       childSolved = searchReturnedSolved;
       childHistoryDependent = searchReturnedHistoryDependent;
+      score += personalityBonus;
     }
     else {
-      score = alphaBeta(childDepth, alpha, alpha + 1, 1, -1);
+      score = alphaBeta(
+        childDepth,
+        alpha - personalityBonus,
+        alpha + 1 - personalityBonus,
+        1,
+        -1
+      );
       childSolved = searchReturnedSolved;
       childHistoryDependent = searchReturnedHistoryDependent;
+      score += personalityBonus;
       if (!searchStopped && score > alpha && score < beta) {
         searchReSearches++;
-        score = alphaBeta(childDepth, alpha, beta, 1, -1);
+        score = alphaBeta(childDepth, alpha - personalityBonus, beta - personalityBonus, 1, -1);
         childSolved = searchReturnedSolved;
         childHistoryDependent = searchReturnedHistoryDependent;
+        score += personalityBonus;
       }
     }
     undo_position();
@@ -1742,23 +1827,33 @@ function searchRootAtDepth(turnDepth: i32): i32 {
       allChildrenSolved = false;
       historyDependent = true;
     }
+    const objectiveScore = score - personalityBonus;
     unchecked(rootDepthScores[index] = score);
+    unchecked(rootDepthObjectiveScores[index] = objectiveScore);
+    if (objectiveScore > strongestObjective) strongestObjective = objectiveScore;
     if (score > best || (score == best && (bestIndex < 0 || index < bestIndex))) {
       best = score;
       bestIndex = index;
+      bestObjective = objectiveScore;
+      bestPersonalityBonus = personalityBonus;
     }
     if (best > alpha) alpha = best;
   }
   if (!searchStopped && bestIndex >= 0) {
     searchBestRootIndex = bestIndex;
     searchBestScore = best;
+    searchBestObjectiveScore = bestObjective;
+    searchStrongestObjectiveScore = strongestObjective;
+    searchBestPersonalityBonus = bestPersonalityBonus;
     if (turnDepth == 1) {
       // The exhaustive completed-turn scores are a much stronger widening
       // order than action geometry, particularly once a turn has two actions.
       for (let order = 0; order < count; order++) {
         const index = i32(unchecked(rootOrderedIndexes[order]));
         unchecked(orderedIndexes[order] = u16(index));
-        unchecked(orderedScores[order] = rootDepthScores[index]);
+        // Personality selects among the canonically strongest candidates; it
+        // never controls which candidates survive deeper root widening.
+        unchecked(orderedScores[order] = rootDepthObjectiveScores[index]);
       }
       if (count > 1) sortOrdered(0, 0, count - 1);
       for (let order = 0; order < count; order++) unchecked(rootOrderedIndexes[order] = orderedIndexes[order]);
@@ -1950,6 +2045,9 @@ export function search_best(
   searchAttemptedDepth = 0;
   searchBestRootIndex = -1;
   searchBestScore = evaluatePosition(searchRootPlayer);
+  searchBestObjectiveScore = searchBestScore;
+  searchStrongestObjectiveScore = searchBestScore;
+  searchBestPersonalityBonus = 0;
   searchStopReason = 0;
   searchStopped = false;
   undoDepth = 0;
@@ -1970,6 +2068,7 @@ export function search_best(
 
   const rootCount = scoreActions(0, 0);
   searchRootActionCount = rootCount;
+  prepareRootPersonalityBonuses(rootCount);
   for (let order = 0; order < rootCount; order++) {
     unchecked(rootOrderedIndexes[order] = orderedIndexes[order]);
     const index = i32(unchecked(orderedIndexes[order]));
@@ -1982,6 +2081,8 @@ export function search_best(
     if (immediateRootWin) searchBestScore = terminalScore(gameOutcome, 1);
     undo_position();
     if (immediateRootWin) {
+      searchBestObjectiveScore = searchBestScore;
+      searchStrongestObjectiveScore = searchBestScore;
       searchCompletedDepth = 1;
       searchAttemptedDepth = 1;
       searchExactSolved = 1;
@@ -1992,6 +2093,8 @@ export function search_best(
   if (rootCount == 1) {
     if (applyAt(0, searchBestRootIndex)) {
       searchBestScore = gameOutcome != 0 ? terminalScore(gameOutcome, 1) : evaluatePosition(searchRootPlayer);
+      searchBestObjectiveScore = searchBestScore;
+      searchStrongestObjectiveScore = searchBestScore;
       undo_position();
     }
     captureRootPlan(searchBestRootIndex, false);
@@ -2035,11 +2138,7 @@ export function clear_transposition_table(): void {
 }
 
 export function evaluate_loaded_position(perspective: i32, style: i32): i32 {
-  const savedStyle = searchStyle;
-  searchStyle = max<i32>(0, min<i32>(6, style));
-  const score = evaluatePosition(perspective);
-  searchStyle = savedStyle;
-  return score;
+  return evaluateStyledPosition(perspective, max<i32>(0, min<i32>(6, style)));
 }
 
 /** Test/diagnostic entry point for the completed-turn tactical horizon. */
@@ -2063,6 +2162,9 @@ export function tactical_probe(perspective: i32, style: i32, tacticalDepth: i32)
 }
 
 export function get_search_score(): i32 { return searchBestScore; }
+export function get_search_objective_score(): i32 { return searchBestObjectiveScore; }
+export function get_search_strongest_objective_score(): i32 { return searchStrongestObjectiveScore; }
+export function get_search_personality_bonus(): i32 { return searchBestPersonalityBonus; }
 export function get_search_nodes(): i32 { return searchNodes; }
 export function get_search_generated_actions(): i32 { return searchGenerated; }
 export function get_search_evaluations(): i32 { return searchEvaluations; }

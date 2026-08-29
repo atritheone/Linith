@@ -1,33 +1,33 @@
 {
   "schema": 1,
-  "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
-  "artifactFingerprint": "sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9",
+  "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794",
+  "artifactFingerprint": "sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794",
   "config": {
     "minCompletedDepth": 4,
     "plans": [
       {
         "name": "primary",
         "symmetry": "identity",
-        "nodeBudget": 100000,
-        "maxDepth": 4,
-        "tacticalDepth": 1,
-        "exactDepth": 1
+        "nodeBudget": 1000000,
+        "maxDepth": 6,
+        "tacticalDepth": 2,
+        "exactDepth": 12
       },
       {
         "name": "corroborator",
         "symmetry": "rotate90",
-        "nodeBudget": 150000,
-        "maxDepth": 5,
+        "nodeBudget": 1500000,
+        "maxDepth": 7,
         "tacticalDepth": 1,
-        "exactDepth": 1
+        "exactDepth": 12
       },
       {
         "name": "tactical",
         "symmetry": "mirrorRotate270",
-        "nodeBudget": 150000,
-        "maxDepth": 4,
-        "tacticalDepth": 2,
-        "exactDepth": 1
+        "nodeBudget": 1500000,
+        "maxDepth": 5,
+        "tacticalDepth": 3,
+        "exactDepth": 16
       }
     ]
   },
@@ -41,16 +41,16 @@
         "r": 4,
         "c": 6
       },
-      "score": 5929,
-      "confidence": 0.9700000000000001,
+      "score": 5557,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -60,16 +60,16 @@
         "r": 4,
         "c": 5
       },
-      "score": 6282,
-      "confidence": 0.9700000000000001,
+      "score": 5909,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -79,16 +79,16 @@
         "r": 5,
         "c": 3
       },
-      "score": 5303,
-      "confidence": 0.9700000000000001,
+      "score": 4900,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -98,16 +98,16 @@
         "r": 2,
         "c": 6
       },
-      "score": 5799,
-      "confidence": 0.9700000000000001,
+      "score": 5404,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -117,16 +117,16 @@
         "r": 5,
         "c": 3
       },
-      "score": -895,
-      "confidence": 0.9700000000000001,
+      "score": -985,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -136,16 +136,16 @@
         "r": 6,
         "c": 5
       },
-      "score": 10081,
-      "confidence": 0.9700000000000001,
+      "score": 9590,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -155,16 +155,16 @@
         "r": 3,
         "c": 3
       },
-      "score": 11784,
-      "confidence": 0.9700000000000001,
+      "score": 11434,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     },
     {
       "schema": 1,
@@ -174,16 +174,16 @@
         "r": 3,
         "c": 7
       },
-      "score": 4854,
-      "confidence": 0.9700000000000001,
+      "score": 4376,
+      "confidence": 0.9800000000000001,
       "verification": {
         "agreements": 3,
         "independentRuns": 3,
-        "minCompletedDepth": 4,
-        "tacticalDepth": 2,
-        "minNodeBudget": 100000
+        "minCompletedDepth": 5,
+        "tacticalDepth": 3,
+        "minNodeBudget": 1000000
       },
-      "generator": "linith-classical-book-1:native:sha256-6029741155cf54765e8e9d85a28e6cdb2c5bbda6d78e191afb9c017e644628c9"
+      "generator": "linith-classical-book-1:native:sha256-5fcb7525c578833d65219d792825ef4e00ad26ed06641b63dd87bac1a2e0e794"
     }
   ],
   "rejections": []
