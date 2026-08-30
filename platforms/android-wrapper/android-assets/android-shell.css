@@ -55,12 +55,18 @@ body.linith-android .panel {
 }
 
 body.linith-android .panelHead {
-  min-height: 48px;
+  min-height: 0;
+  padding-bottom: 0;
 }
 
 body.linith-android .statusRegion {
   min-height: 60px;
   padding-block: 12px;
+}
+
+body.linith-android .statusRegion:empty {
+  min-height: 0;
+  padding: 0;
 }
 
 body.linith-android .commandBar {
@@ -91,6 +97,29 @@ body.linith-android .confirmButtons {
 body.linith-android .panelBody {
   min-height: 0;
   overflow: visible;
+}
+
+body.linith-android .boardWrap > .startMenu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  align-content: center;
+  width: var(--board);
+  height: var(--board);
+  box-sizing: border-box;
+  gap: 8px;
+  padding: clamp(18px, 6vw, 28px);
+  background: rgba(8, 10, 13, .78);
+}
+
+body.linith-android .boardWrap > .startMenu > .sectionLabel {
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+body.linith-android .boardWrap > .startMenu .modeChoice {
+  background: rgba(8, 10, 13, .88);
 }
 
 body.linith-android .modeChoice {

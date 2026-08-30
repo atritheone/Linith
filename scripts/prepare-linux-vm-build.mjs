@@ -17,7 +17,8 @@ const includePaths = [
   "tsconfig.json",
   "electron.vite.config.ts",
   "src",
-  "build"
+  "build",
+  "scripts/normalize-linux-icon-permissions.mjs"
 ];
 
 const instructions = `# Linux VM build input

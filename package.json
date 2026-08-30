@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "private": true,
+  "desktopName": "linith",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -18,7 +19,7 @@
     "build": "tsc --noEmit && electron-vite build",
     "build:standalone": "npm run build && node scripts/build-standalone.mjs",
     "dist:win": "npm run build && electron-builder --win portable",
-    "dist:linux": "npm run build && electron-builder --linux deb",
+    "dist:linux": "npm run build && node scripts/normalize-linux-icon-permissions.mjs && electron-builder --linux deb",
     "dist:mac": "npm run build && electron-builder --mac dmg zip",
     "prepare:linux-vm": "node scripts/prepare-linux-vm-build.mjs",
     "prepare:mac-vm": "node scripts/prepare-mac-vm-build.mjs",
@@ -72,7 +73,13 @@
       ]
     },
     "linux": {
-      "icon": "build/icon.png",
+      "icon": "build/icons",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "Icon": "/usr/share/icons/hicolor/512x512/apps/linith.png"
+        }
+      },
       "maintainer": "slayer <edward@atritheone.com>",
       "category": "Game",
       "target": [
